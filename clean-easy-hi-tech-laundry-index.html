@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Easy Hi-Tech Laundry | Pune</title>
+<meta name="description" content="Professional laundry, washing, ironing, dry cleaning and doorstep pickup & delivery service in Pune.">
+<style>
+:root{
+  --blue:#0784df;--dark:#12304a;--light:#f4faff;--green:#20b85a;--text:#526778;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Arial,Helvetica,sans-serif;color:var(--dark);background:#fff;line-height:1.6}
+a{text-decoration:none;color:inherit}
+.container{width:min(1140px,92%);margin:auto}
+header{position:sticky;top:0;z-index:1000;background:#fff;box-shadow:0 2px 18px #00000012}
+.nav{min-height:72px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#087bdc,#41c1ff);display:grid;place-items:center;font-size:23px}
+.brand span{color:var(--blue)}
+nav{display:flex;align-items:center;gap:24px;font-size:14px;font-weight:700}
+nav a:hover{color:var(--blue)}
+.nav-cta{background:var(--blue);color:#fff;padding:11px 17px;border-radius:25px}
+.menu{display:none;font-size:27px;cursor:pointer}
+.hero{min-height:650px;display:flex;align-items:center;background:
+linear-gradient(90deg,#f7fbffff 0%,#f7fbffe8 38%,#f7fbff20 100%),
+url("https://images.unsplash.com/photo-1582735689369-4fe89db7114c?auto=format&fit=crop&w=1800&q=85") center/cover}
+.hero-content{max-width:620px;padding:90px 0}
+.badge{display:inline-block;background:#e5f5ff;color:#0876c7;border-radius:30px;padding:8px 15px;font-size:13px;font-weight:800;margin-bottom:18px}
+h1{font-size:58px;line-height:1.05;margin-bottom:22px}
+h1 span{color:var(--blue)}
+.hero p{font-size:18px;color:var(--text);max-width:570px;margin-bottom:30px}
+.buttons{display:flex;gap:13px;flex-wrap:wrap}
+.btn{display:inline-block;border:0;border-radius:8px;padding:14px 23px;font-weight:800;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.whatsapp{background:var(--green);color:#fff}.outline{border:2px solid var(--blue);color:var(--blue);background:#fff}
+.trust{background:var(--dark);color:#fff}.trust-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.trust-item{text-align:center;padding:22px 10px;border-right:1px solid #ffffff22}.trust-item:last-child{border:0}
+.trust-item strong{display:block}.trust-item small{opacity:.75}
+section{padding:80px 0}
+.heading{text-align:center;margin-bottom:42px}.heading .eyebrow{color:var(--blue);font-size:12px;font-weight:900;letter-spacing:1.5px}.heading h2{font-size:38px;margin:6px 0}.heading p{color:var(--text)}
+.services{background:#fff}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{border:1px solid #e4edf4;border-radius:17px;overflow:hidden;background:#fff;box-shadow:0 8px 25px #17435e10;transition:.25s}
+.card:hover{transform:translateY(-6px);box-shadow:0 16px 35px #17435e18}
+.card-img{height:190px;background-size:cover;background-position:center}
+.card-body{padding:22px}.card h3{font-size:20px;margin-bottom:7px}.card p{font-size:14px;color:var(--text)}.price{margin-top:12px;color:var(--blue);font-weight:900}
+.offer{background:linear-gradient(135deg,#0577cf,#16a9e9);color:#fff}.offer-box{display:flex;align-items:center;justify-content:space-between;gap:30px}.offer h2{font-size:40px}.offer p{font-size:17px}
+.offer-badge{background:#fff;color:#0877c7;border-radius:18px;padding:25px 35px;text-align:center;min-width:230px;box-shadow:0 15px 30px #0002}.offer-badge b{display:block;font-size:43px}
+.why{background:var(--light)}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}.why-card{background:#fff;border-radius:15px;padding:28px 18px;text-align:center;box-shadow:0 5px 20px #00000008}.icon{width:62px;height:62px;border-radius:50%;background:#e7f5ff;display:grid;place-items:center;font-size:28px;margin:0 auto 14px}.why-card p{font-size:13px;color:var(--text)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}.step{text-align:center}.num{width:58px;height:58px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:21px;font-weight:900;margin:0 auto 14px}.step p{font-size:14px;color:var(--text)}
+.plans{background:var(--light)}.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}.plan{background:#fff;border-radius:18px;padding:30px 24px;border:1px solid #e2ebf1;text-align:center}.plan.popular{border:3px solid var(--blue);transform:translateY(-7px)}.plan .tag{color:var(--blue);font-weight:900;font-size:12px;text-transform:uppercase}.plan h3{font-size:24px}.amount{font-size:38px;font-weight:900;margin:12px}.amount small{font-size:13px;color:#7a8b97;font-weight:400}.plan ul{list-style:none;text-align:left;margin:18px 0}.plan li{padding:8px 0;border-bottom:1px solid #edf1f4;font-size:14px}.plan li:before{content:"✓";color:var(--blue);font-weight:900;margin-right:8px}
+.areas{text-align:center}.area-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}.area{background:#eef8ff;color:#12699d;border-radius:25px;padding:10px 18px;font-weight:700}
+.booking{background:linear-gradient(135deg,#eaf7ff,#fff)}.booking-box{max-width:850px;margin:auto;background:#fff;padding:38px;border-radius:20px;box-shadow:0 15px 45px #00000012}.booking-box>h2{text-align:center;font-size:32px}.subtitle{text-align:center;color:var(--text);margin-bottom:28px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field{display:flex;flex-direction:column}.full{grid-column:1/-1}.field label{font-size:13px;font-weight:800;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;padding:13px;border:1px solid #d6e2ea;border-radius:8px;font:inherit;outline:0}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px #0784df18}.field textarea{min-height:105px;resize:vertical}.submit{width:100%;margin-top:18px;padding:15px;border:0;border-radius:8px;background:var(--green);color:#fff;font-size:16px;font-weight:900;cursor:pointer}
+.contact{background:var(--dark);color:#fff}.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px}.contact h2{font-size:38px}.contact p{color:#c8d5dd}.contact-item{display:flex;gap:14px;margin:18px 0}.contact-icon{width:44px;height:44px;border-radius:10px;background:#ffffff12;display:grid;place-items:center}.contact-item small{display:block;color:#c8d5dd}
+footer{background:#091f2e;color:#b8c8d3;text-align:center;padding:25px;font-size:13px}
+.float-wa{position:fixed;right:22px;bottom:22px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-size:28px;z-index:999;box-shadow:0 6px 20px #0003}
+@media(max-width:900px){
+ nav{display:none}.menu{display:block}.grid3{grid-template-columns:1fr 1fr}.grid4{grid-template-columns:1fr 1fr}.steps{grid-template-columns:1fr 1fr}.plan-grid{grid-template-columns:1fr}.plan.popular{transform:none}.offer-box{flex-direction:column;text-align:center}.contact-grid{grid-template-columns:1fr}.hero h1{font-size:45px}
+}
+@media(max-width:600px){
+ section{padding:58px 0}.hero{min-height:650px;background-position:68% center}.hero-content{padding:70px 0}.hero h1{font-size:38px}.hero p{font-size:16px}.trust-grid{grid-template-columns:1fr 1fr}.trust-item{padding:17px 6px}.grid3,.grid4,.steps{grid-template-columns:1fr}.heading h2{font-size:30px}.offer h2{font-size:31px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.booking-box{padding:25px 18px}.contact h2{font-size:30px}
+}
+</style>
+</head>
+<body>
+
+<header>
+<div class="container nav">
+  <a class="brand" href="#home"><div class="logo">🧺</div><div>Clean Easy <span>Hi-Tech Laundry</span></div></a>
+  <nav>
+    <a href="#home">Home</a><a href="#services">Services</a><a href="#plans">Plans</a><a href="#booking">Book Now</a><a href="#contact">Contact</a>
+    <a class="nav-cta" href="#booking">Schedule Pickup</a>
+  </nav>
+  <div class="menu" onclick="document.querySelector('nav').classList.toggle('show')">☰</div>
+</div>
+</header>
+
+<main>
+<section class="hero" id="home">
+<div class="container"><div class="hero-content">
+<div class="badge">PROFESSIONAL LAUNDRY & DRY CLEANING</div>
+<h1>Fresh Clothes.<br><span>Professional Care.</span></h1>
+<p>दर्जेदार, विश्वासार्ह आणि काळजीपूर्वक कपडे स्वच्छ करण्याची सेवा. तुमच्या कपड्यांची काळजी आता आमची जबाबदारी.</p>
+<div class="buttons">
+<a class="btn primary" href="#booking">Book a Service</a>
+<a class="btn whatsapp" href="https://wa.me/917385468876" target="_blank">💬 Chat on WhatsApp</a>
+</div>
+</div></div>
+</section>
+
+<div class="trust"><div class="container trust-grid">
+<div class="trust-item"><strong>🧺 Quality Cleaning</strong><small>Professional Care</small></div>
+<div class="trust-item"><strong>🚚 Pickup & Delivery</strong><small>Doorstep Convenience</small></div>
+<div class="trust-item"><strong>⚡ Fast Service</strong><small>Quick Turnaround</small></div>
+<div class="trust-item"><strong>🛡️ Hygienic Care</strong><small>Clean & Safe Process</small></div>
+</div></div>
+
+<section class="services" id="services">
+<div class="container">
+<div class="heading"><div class="eyebrow">OUR SERVICES</div><h2>Complete Laundry Care</h2><p>Everything your clothes need, under one roof.</p></div>
+<div class="grid3">
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Wash & Fold</h3><p>कपड्यांची स्वच्छ धुलाई करून व्यवस्थित folding.</p><div class="price">₹70 / kg</div></div></div>
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Wash + Iron</h3><p>धुलाईसोबत professional ironing service.</p><div class="price">₹100 / kg</div></div></div>
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1593032465175-481ac7f401a0?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Dry Cleaning</h3><p>विशेष कपड्यांसाठी काळजीपूर्वक dry cleaning.</p><div class="price">From ₹40 / piece</div></div></div>
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1583845112203-454c3b8f8c31?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Blanket & Curtain</h3><p>Blanket, गोधडी, पायपुसणी आणि पडदे cleaning.</p><div class="price">₹60 / kg</div></div></div>
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Bag & Shoes</h3><p>Bags आणि shoes साठी professional cleaning.</p><div class="price">₹100 / piece</div></div></div>
+<div class="card"><div class="card-img" style="background-image:url('https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=80')"></div><div class="card-body"><h3>Premium Care</h3><p>Delicate आणि premium कपड्यांसाठी special care.</p><div class="price">Contact for pricing</div></div></div>
+</div></div>
+</section>
+
+<section class="offer"><div class="container offer-box">
+<div><div class="eyebrow">WELCOME OFFER</div><h2>Get Your First Wash Special!</h2><p>नवीन ग्राहकांसाठी विशेष Welcome Offer.</p><br><a class="btn" style="background:#fff;color:#0877c7" href="#booking">Book Now</a></div>
+<div class="offer-badge"><b>3 KG</b><span>WASHING FREE</span><small>New Customer Welcome Offer</small></div>
+</div></section>
+
+<section class="why"><div class="container">
+<div class="heading"><div class="eyebrow">WHY CLEAN EASY</div><h2>Why Choose Us?</h2><p>Professional service designed around your convenience.</p></div>
+<div class="grid4">
+<div class="why-card"><div class="icon">✨</div><h3>Professional Service</h3><p>प्रशिक्षित टीमकडून दर्जेदार सेवा.</p></div>
+<div class="why-card"><div class="icon">🧼</div><h3>Hygienic Cleaning</h3><p>स्वच्छ आणि काळजीपूर्वक cleaning process.</p></div>
+<div class="why-card"><div class="icon">🚚</div><h3>Doorstep Pickup</h3><p>तुमच्या घरून कपडे घेऊन जाण्याची सुविधा.</p></div>
+<div class="why-card"><div class="icon">⏱️</div><h3>Timely Delivery</h3><p>कपडे शक्य तितक्या लवकर परत देण्याचा प्रयत्न.</p></div>
+</div></div></section>
+
+<section><div class="container">
+<div class="heading"><div class="eyebrow">HOW IT WORKS</div><h2>Simple. Fast. Convenient.</h2><p>फक्त 4 सोप्या steps मध्ये laundry service.</p></div>
+<div class="steps">
+<div class="step"><div class="num">1</div><h3>Book</h3><p>Online form भरून service book करा.</p></div>
+<div class="step"><div class="num">2</div><h3>Pickup</h3><p>आमची team तुमच्याकडून कपडे घेईल.</p></div>
+<div class="step"><div class="num">3</div><h3>Cleaning</h3><p>कपड्यांची professional cleaning केली जाईल.</p></div>
+<div class="step"><div class="num">4</div><h3>Delivery</h3><p>स्वच्छ कपडे doorstep वर मिळतील.</p></div>
+</div></div></section>
+
+<section class="plans" id="plans"><div class="container">
+<div class="heading"><div class="eyebrow">LAUNDRY PLANS</div><h2>Choose Your Plan</h2><p>Regular customers साठी convenient monthly plans.</p></div>
+<div class="plan-grid">
+<div class="plan"><div class="tag">Bachelor</div><h3>Basic Plan</h3><div class="amount">₹599 <small>/ month</small></div><ul><li>5 KG clothes / week</li><li>Wash & Fold</li><li>Pickup & Delivery</li><li>48–72 hour service</li><li>Ironing available</li></ul><a class="btn outline" href="#booking">Choose Plan</a></div>
+<div class="plan popular"><div class="tag">Popular</div><h3>Premium Plan</h3><div class="amount">₹1199 <small>/ month</small></div><ul><li>10 KG clothes / week</li><li>Extra 5 KG option</li><li>Iron & Fold included</li><li>Pickup & Delivery</li><li>Priority service</li></ul><a class="btn primary" href="#booking">Choose Plan</a></div>
+<div class="plan"><div class="tag">Family</div><h3>Family Pack</h3><div class="amount">₹799 <small>/ month</small></div><ul><li>7 KG clothes / week</li><li>Wash & Fold</li><li>Pickup & Delivery</li><li>2–3 day service</li><li>Extra ironing available</li></ul><a class="btn outline" href="#booking">Choose Plan</a></div>
+</div></div></section>
+
+<section class="areas"><div class="container">
+<div class="heading"><div class="eyebrow">SERVICE AREAS</div><h2>We Serve Your Area</h2><p>Pickup & delivery available in selected Pune areas.</p></div>
+<div class="area-grid"><div class="area">Katraj</div><div class="area">Gokulnagar</div><div class="area">Kondhwa</div><div class="area">Kondhwa Budruk</div><div class="area">Hadapsar</div><div class="area">Kalepadal</div><div class="area">Undri</div><div class="area">Pisoli</div><div class="area">Handewadi</div><div class="area">Urali Devachi</div></div>
+</div></section>
+
+<section class="booking" id="booking"><div class="container"><div class="booking-box">
+<h2>Schedule Your Pickup</h2><p class="subtitle">Easy & Fast — Fill the form and we'll contact you.</p>
+<form id="bookingForm">
+<div class="form-grid">
+<div class="field"><label>Full Name *</label><input id="name" required placeholder="Enter your name"></div>
+<div class="field"><label>Phone Number *</label><input id="phone" type="tel" pattern="[0-9]{10}" required placeholder="10 digit mobile number"></div>
+<div class="field"><label>WhatsApp Number</label><input id="wa" type="tel" placeholder="WhatsApp number"></div>
+<div class="field"><label>PIN Code *</label><input id="pin" pattern="[0-9]{6}" required placeholder="6 digit PIN code"></div>
+<div class="field full"><label>Choose Service *</label><select id="service" required><option value="">Select a service</option><option>Washing</option><option>Washing + Iron</option><option>Dry Cleaning</option><option>Blanket / Curtain Cleaning</option><option>Bag / Shoes Cleaning</option><option>Premium Care</option></select></div>
+<div class="field full"><label>Pickup Address *</label><textarea id="address" required placeholder="Enter complete pickup address"></textarea></div>
+</div>
+<button class="submit" type="submit">🚚 Schedule Pickup on WhatsApp</button>
+</form>
+</div></div></section>
+
+<section class="contact" id="contact"><div class="container contact-grid">
+<div><div class="eyebrow">CONTACT US</div><h2>Let's Take Care of Your Laundry.</h2><p>कपड्यांची धुलाई, ironing किंवा dry cleaning साठी आजच संपर्क करा.</p><br><a class="btn whatsapp" href="https://wa.me/917385468876" target="_blank">💬 WhatsApp Us</a></div>
+<div>
+<div class="contact-item"><div class="contact-icon">📞</div><div><strong>Call / WhatsApp</strong><small>+91 73854 68876</small></div></div>
+<div class="contact-item"><div class="contact-icon">📍</div><div><strong>Branch 1</strong><small>Dream Rachna Building, Shop No. 12, Kalepadal, Hadapsar, Pune<br>+91 91455 54242</small></div></div>
+<div class="contact-item"><div class="contact-icon">📍</div><div><strong>Branch 2</strong><small>Near Shankar Mandir, Gokulnagar, Katraj–Kondhwa Road, Pune<br>+91 73854 68876</small></div></div>
+</div></div></section>
+</main>
+
+<footer>© 2026 <strong>Clean Easy Hi-Tech Laundry</strong> · Professional Laundry & Dry Cleaning Service</footer>
+
+<a class="float-wa" href="https://wa.me/917385468876" target="_blank">💬</a>
+
+<script>
+document.getElementById("bookingForm").addEventListener("submit",function(e){
+ e.preventDefault();
+ const name=document.getElementById("name").value.trim();
+ const phone=document.getElementById("phone").value.trim();
+ const wa=document.getElementById("wa").value.trim();
+ const pin=document.getElementById("pin").value.trim();
+ const service=document.getElementById("service").value;
+ const address=document.getElementById("address").value.trim();
+ const msg =
+ "🧺 CLEAN EASY HI-TECH LAUNDRY\n\n"+
+ "NEW BOOKING REQUEST\n\n"+
+ "Name: "+name+"\n"+
+ "Phone: "+phone+"\n"+
+ "WhatsApp: "+(wa||"Not provided")+"\n"+
+ "PIN Code: "+pin+"\n"+
+ "Service: "+service+"\n"+
+ "Pickup Address: "+address+"\n\n"+
+ "Please contact me for pickup.";
+ window.open("https://wa.me/917385468876?text="+encodeURIComponent(msg),"_blank");
+});
+</script>
+</body>
+</html>
