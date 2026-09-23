@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0869b1">
+<meta name="description" content="CleanEazy Laundry — professional laundry and dry cleaning with doorstep pickup and delivery in Pune.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/">
+<meta property="og:title" content="CleanEazy Laundry | Pune">
+<meta property="og:description" content="Fresh Clothes. Zero Hassle. Professional laundry and dry cleaning with doorstep pickup and delivery in Pune.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/">
+<meta property="og:image" content="https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?auto=format&fit=crop&w=1800&q=86">
+<title>CleanEazy Laundry | Pune</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%230869b1'/%3E%3Cpath d='M16 40c9 7 23 7 32 0' fill='none' stroke='%2364dfbc' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M20 25h24' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --blue:#087fc1;--blue2:#1597dc;--navy:#063b5d;--green:#42be91;--cyan:#dff7ff;
+  --ink:#18354b;--muted:#687f91;--line:#dcebf2;--bg:#f7fbfd;--white:#fff;
+  --shadow:0 12px 34px rgba(13,76,111,.09)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"DM Sans",Arial,sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font:inherit}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.container{width:min(1210px,calc(100% - 30px));margin:auto}
+.nav{position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid rgba(217,231,239,.75)}
+.nav-inner{min-height:78px;display:flex;align-items:center;gap:19px}
+.logo-link img{width:225px;height:72px;object-fit:contain;object-position:left center}
+.nav-links{display:flex;align-items:center;gap:22px;margin-left:auto;color:#476175;font-size:13px}
+.nav-links a:hover{color:var(--blue)}
+.contact-mini{display:flex;align-items:center;gap:8px;border:1px solid #bde8dc;padding:10px 13px;border-radius:14px;color:#0b765a;background:#f8fffc;white-space:nowrap}
+.contact-mini strong{display:block;color:var(--navy);font:800 17px/1 Manrope}
+.contact-mini small{display:block;font-size:10px;color:#4e6b7b}
+.socials{display:flex;gap:12px;align-items:center}
+.socials a{font-weight:800;font-size:12px;display:flex;align-items:center;gap:6px}
+.ig{color:#c33c8d}.fb{color:#2276d2}
+.book{padding:12px 17px;border-radius:13px;background:linear-gradient(135deg,#1597dc,#0869b1);color:#fff!important;font-weight:800;box-shadow:0 10px 24px rgba(8,105,177,.18)}
+.menu{display:none;border:0;background:none;font-size:26px;color:var(--navy);margin-left:auto}
+
+.hero{padding:132px 0 62px;background:linear-gradient(90deg,#edf9fd,#f8fcfe);position:relative;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:.83fr 1.17fr;gap:28px;align-items:center}
+.hero-copy h1{font:800 clamp(48px,6.4vw,76px)/.97 Manrope;color:var(--navy);letter-spacing:-3px}
+.hero-copy h1 span{display:block;color:var(--blue)}
+.hero-copy p{font-size:18px;color:#64798b;line-height:1.65;margin-top:15px;max-width:550px}
+.hero-bullets{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:24px;color:#557082;font-size:12px}
+.hero-bullets span{display:flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 0 6px rgba(66,190,145,.08)}
+.hero-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:25px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:13px;border:1px solid transparent;font-weight:800;font-size:14px;cursor:pointer;transition:.22s}
+.btn-primary{background:linear-gradient(135deg,#1597dc,#0869b1);color:#fff;box-shadow:0 12px 28px rgba(8,105,177,.17)}
+.btn-primary:hover{transform:translateY(-2px)}
+.btn-secondary{background:#fff;border-color:#c9dfe9;color:#0b5c8f}
+.hero-photo{height:520px;border-radius:28px;overflow:hidden;position:relative;box-shadow:0 22px 60px rgba(17,70,96,.14)}
+.hero-photo img{object-position:center}
+.hero-photo:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(2,27,45,.12),transparent 50%)}
+.handwritten{position:absolute;right:26px;top:35px;color:#0a2f50;font:700 34px/1.05 "Brush Script MT","Segoe Script",cursive;z-index:2;transform:rotate(-8deg)}
+.hero-photo-label{position:absolute;left:20px;bottom:20px;padding:11px 14px;border-radius:14px;background:rgba(4,35,59,.76);color:#fff;z-index:2;font-size:12px;backdrop-filter:blur(10px)}
+
+.trust{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.trust-item{min-height:75px;padding:12px 15px;display:flex;align-items:center;gap:10px;border-right:1px solid var(--line);font-size:12px;color:#5d7385}
+.trust-item:last-child{border-right:0}
+.t-icon{width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:#eef8fc;display:grid;place-items:center;color:var(--blue);font-size:16px}
+.trust-item b{display:block;color:var(--navy);font-size:12px;margin-bottom:2px}
+
+section{padding:88px 0}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--blue);font-weight:800}
+.section-head{text-align:center;max-width:800px;margin:0 auto 35px}
+.section-head h2{font:800 clamp(34px,4.6vw,54px)/1.05 Manrope;color:var(--navy);letter-spacing:-2px;margin-top:7px}
+.section-head p{color:var(--muted);line-height:1.7;margin-top:10px}
+
+.services{background:#fff}
+.service-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.service{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 8px 25px rgba(21,69,95,.05);transition:.25s}
+.service:hover{transform:translateY(-4px);box-shadow:0 15px 35px rgba(21,69,95,.09)}
+.service-img{height:150px}.service-body{padding:16px}.service h3{font:800 16px Manrope;color:var(--navy)}.service p{font-size:11px;color:#6e8292;line-height:1.5;margin-top:5px}
+.service a{display:inline-flex;margin-top:9px;font-size:11px;color:var(--blue);font-weight:800}
+
+.welcome{background:linear-gradient(120deg,#dff7ff,#f4fbfd)}
+.offer{background:#fff;border:1px solid #cfe5ee;box-shadow:var(--shadow);border-radius:28px;padding:36px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.offer h2{font:800 clamp(34px,5vw,54px) Manrope;color:var(--navy);letter-spacing:-2px;margin-top:5px}
+.offer p{color:#65798a;line-height:1.65;max-width:650px;margin-top:8px}
+.offer-badge{width:142px;height:142px;border-radius:50%;background:linear-gradient(145deg,#168fce,#0869b1);display:grid;place-items:center;color:#fff;text-align:center;box-shadow:0 20px 35px rgba(8,105,177,.18);flex:0 0 142px}
+.offer-badge strong{display:block;font:800 41px/1 Manrope}.offer-badge span{font-size:10px;letter-spacing:1px;font-weight:800}
+
+.why{background:#f4fafc}
+.why-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:stretch}
+.why-photo{min-height:500px;border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}
+.why-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.why-card{background:#fff;border:1px solid var(--line);border-radius:19px;padding:21px;box-shadow:0 10px 30px rgba(22,70,95,.04)}
+.iconbox{width:38px;height:38px;border-radius:11px;background:#eff8fc;color:var(--blue);display:grid;place-items:center;margin-bottom:32px}
+.why-card h3{font:800 17px Manrope;color:var(--navy)}.why-card p{font-size:12px;line-height:1.6;color:#6d8191;margin-top:6px}
+
+.process{background:#fff}
+.timeline{display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+.step{background:#fbfdfe;border:1px solid var(--line);border-radius:17px;padding:16px;min-height:150px}
+.step .num{font:800 11px Manrope;color:var(--blue);margin-bottom:27px}.step h3{font:800 13px Manrope;color:var(--navy)}.step p{font-size:11px;line-height:1.45;color:#728696;margin-top:5px}
+
+.gallery{background:#f4fafc}
+.gallery-grid{display:grid;grid-template-columns:1.4fr .8fr .8fr;grid-template-rows:235px 235px;gap:13px}
+.g{position:relative;border-radius:21px;overflow:hidden;border:1px solid var(--line)}.g:first-child{grid-row:1/3}.g img{transition:.7s}.g:hover img{transform:scale(1.04)}
+.g span{position:absolute;left:14px;bottom:14px;z-index:2;background:rgba(6,45,72,.78);color:#fff;padding:8px 10px;border-radius:10px;font-size:11px}
+
+.areas{background:#fff}
+.area-grid{display:grid;grid-template-columns:1fr .85fr;gap:20px;align-items:stretch}
+.area-photo{border-radius:28px;overflow:hidden;min-height:380px;border:1px solid var(--line)}
+.area-panel{background:#f8fbfd;border:1px solid var(--line);border-radius:24px;padding:26px}
+.area-panel h3{font:800 24px Manrope;color:var(--navy)}.area-panel p{font-size:13px;color:#6e8292;line-height:1.6;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.chip{padding:8px 10px;border:1px solid #d8e7ee;background:#fff;border-radius:999px;color:#34576d;font-size:11px}
+
+.reviews{background:#f4fafc}
+.review-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:15px}
+.review-main,.review-card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.review-main{padding:30px;min-height:235px}.stars{color:#edae35;letter-spacing:2px}.review-main h3{font:800 24px Manrope;color:var(--navy);margin-top:7px}.review-main p,.review-card p{font-size:12px;line-height:1.6;color:#708494;margin-top:7px}
+.review-card{padding:20px}.review-card strong{display:block;font-size:14px;color:var(--navy);margin-top:8px}
+
+.faq{background:#fff}.faq-list{display:grid;gap:9px;max-width:910px;margin:auto}
+details{border:1px solid var(--line);border-radius:15px;background:#fbfdfe;padding:0 17px}
+summary{list-style:none;cursor:pointer;padding:17px 2px;font:700 14px Manrope;color:var(--navy)}summary::-webkit-details-marker{display:none}
+details p{font-size:12px;line-height:1.6;color:#6d8191;padding:0 2px 16px}
+
+.booking{background:#eaf7fc}
+.booking-grid{display:grid;grid-template-columns:.75fr 1.25fr;gap:25px}
+.booking-copy h2{font:800 clamp(34px,5vw,53px)/1.03 Manrope;color:var(--navy);letter-spacing:-2px;margin-top:6px}.booking-copy p{color:#64798b;line-height:1.7;margin-top:10px}
+.contacts{display:grid;gap:10px;margin-top:24px}.contact{background:#fff;border:1px solid var(--line);border-radius:15px;padding:13px}.contact b{display:block;color:var(--navy);font-size:12px}.contact span{font-size:12px;color:#6d8191;line-height:1.5}
+.form{background:#fff;border:1px solid var(--line);border-radius:23px;padding:24px;box-shadow:var(--shadow)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
+.field label{display:block;font-size:11px;color:#718595;margin:0 0 6px 2px}.field input,.field select,.field textarea{width:100%;border:1px solid #d8e7ee;background:#fbfdfe;color:var(--ink);border-radius:12px;padding:13px;outline:0}.field textarea{min-height:100px;resize:vertical}
+.form .btn{width:100%;margin-top:13px}.form-note{font-size:10px;color:#8999a6;line-height:1.5;margin-top:8px}
+
+footer{background:var(--navy);color:#fff;padding:42px 0 22px}.footer-top{display:grid;grid-template-columns:1.1fr 1.9fr;gap:40px}.footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:25px}.ft-title{font:700 12px Manrope;margin-bottom:10px}.ft-links{display:grid;gap:8px;font-size:11px;color:#a7bfce}.bottom{border-top:1px solid rgba(255,255,255,.12);margin-top:28px;padding-top:17px;font-size:10px;color:#83a0b4;line-height:1.5}
+.floaters{position:fixed;right:15px;bottom:15px;display:flex;flex-direction:column;gap:8px;z-index:55}.float{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;box-shadow:0 15px 30px rgba(0,0,0,.16);font-size:20px}.call{background:#fff;color:var(--blue)}.wa{background:#1fd268;color:#fff}
+
+.modal{position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:15px;background:rgba(2,18,32,.60);backdrop-filter:blur(9px)}.modal.show{display:grid}
+.modal-card{width:min(650px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:25px;box-shadow:0 35px 90px rgba(0,0,0,.28)}
+.modal-head{display:flex;justify-content:space-between;gap:20px;padding:21px 22px 7px}.modal-head h3{font:800 25px Manrope;color:var(--navy)}.modal-head p{color:#708493;font-size:12px;margin-top:4px}.close{width:38px;height:38px;border:1px solid var(--line);background:#f5fafc;border-radius:11px;color:var(--navy);font-size:22px}
+.modal-body{padding:11px 22px 22px}.reveal{opacity:0;transform:translateY(18px);transition:.6s}.reveal.show{opacity:1;transform:none}
+
+@media(max-width:1120px){
+  .socials{display:none}.nav-links{gap:16px}.service-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:980px){
+  .nav-links{display:none}.menu{display:block}.logo-link img{width:195px;height:64px}
+  .nav.open .nav-links{display:flex;position:absolute;top:78px;left:15px;right:15px;flex-direction:column;align-items:flex-start;gap:13px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:18px}
+  .hero-grid,.why-grid,.area-grid,.booking-grid,.review-grid{grid-template-columns:1fr}
+  .hero-photo{height:420px}.why-photo{min-height:380px}.timeline{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:620px){
+  .container{width:calc(100% - 24px)}.logo-link img{width:175px;height:58px}
+  .hero{padding:105px 0 45px}.hero-copy h1{font-size:48px;letter-spacing:-2.4px}.hero-copy p{font-size:15px}.hero-photo{height:330px}.handwritten{font-size:27px;right:15px;top:20px}
+  section{padding:70px 0}.trust-grid{grid-template-columns:1fr 1fr}.trust-item:nth-child(n+4){display:none}
+  .service-grid{grid-template-columns:1fr 1fr}.service-img{height:132px}
+  .offer{padding:26px;flex-direction:column;align-items:flex-start}.offer-badge{width:120px;height:120px;flex-basis:120px}.offer-badge strong{font-size:34px}
+  .why-cards{grid-template-columns:1fr}.timeline{grid-template-columns:1fr}.step{min-height:auto}.gallery-grid{grid-template-columns:1fr 1fr;grid-template-rows:190px 190px 190px}.g:first-child{grid-row:1/3}
+  .fields{grid-template-columns:1fr}.full{grid-column:auto}.footer-top{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr 1fr}
+  .modal{padding:0}.modal-card{min-height:100vh;max-height:100vh;border-radius:0}
+}
+
+.social-links{display:flex;align-items:center;gap:9px;margin-left:auto}
+.social-link{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#fff;border:1px solid #dbe8ef;box-shadow:0 7px 18px rgba(14,73,103,.08);transition:.2s}
+.social-link:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(14,73,103,.12)}
+.social-link svg{width:19px;height:19px}
+.social-instagram{color:#d62976}
+.social-facebook{color:#1877f2}
+.footer-social{margin:0}
+@media(max-width:1000px){
+  .social-links{margin-left:0}
+}
+@media(max-width:620px){
+  .social-link{width:38px;height:38px;border-radius:11px}
+}
+
+
+/* FINAL HEADER FIX: logo + social icons stay on one line, especially on mobile */
+.nav-inner{min-height:72px;display:flex;align-items:center;gap:14px}
+.logo-link{display:flex;align-items:center;flex:0 0 auto}
+.logo-link img{width:205px;height:58px;object-fit:contain;object-position:left center}
+.nav-links{display:flex;align-items:center;gap:19px;margin-left:auto;color:#476175;font-size:12px;white-space:nowrap}
+.social-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.social-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:#fff;border:1px solid #d7e7ee;box-shadow:0 6px 14px rgba(9,72,105,.07);transition:.2s}
+.social-icon:hover{transform:translateY(-2px)}
+.social-icon svg{width:18px;height:18px}
+.social-icon.instagram{color:#d62976}.social-icon.facebook{color:#1877f2}.social-icon.whatsapp{color:#18ad68}
+.book{white-space:nowrap}
+.menu{display:none}
+@media(max-width:1120px){.nav-links{gap:13px;font-size:11px}.logo-link img{width:190px}}
+@media(max-width:1000px){
+  .nav-inner{min-height:68px;gap:8px}
+  .logo-link img{width:165px;height:52px}
+  .nav-links{display:none}
+  .social-actions{margin-left:auto}
+  .social-icon{width:34px;height:34px;border-radius:10px}
+  .social-actions .book{display:none}
+  .menu{display:block;border:0;background:none;font-size:24px;color:var(--navy);cursor:pointer;padding:2px;margin-left:2px}
+  .nav.open .nav-links{display:flex;position:absolute;left:12px;right:12px;top:68px;flex-direction:column;align-items:flex-start;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 35px rgba(13,76,111,.09)}
+  .nav.open .nav-links .book{display:inline-flex}
+  .hero{padding-top:105px}
+}
+@media(max-width:620px){
+  .container{width:calc(100% - 24px)}
+  .nav-inner{min-height:64px}
+  .logo-link img{width:145px;height:46px}
+  .social-actions{gap:5px}
+  .social-icon{width:31px;height:31px;border-radius:9px}
+  .social-icon svg{width:16px;height:16px}
+  .menu{font-size:23px;margin-left:1px}
+  .nav.open .nav-links{top:64px}
+  .hero{padding:92px 0 48px}
+  .hero-grid{grid-template-columns:1fr;gap:20px}
+  .hero-copy h1{font-size:47px;letter-spacing:-2.5px}
+  .hero-photo{height:345px;border-radius:22px}
+  .handwritten{right:15px;top:18px;font-size:26px}
+}
+
+
+/* ===== CleanEazy exact brand palette ===== */
+:root{
+  --ce-blue:#2D3192;
+  --ce-blue-dark:#20246F;
+  --ce-green:#4AB859;
+  --ce-green-light:#EDF8EE;
+  --ce-red:#E63232;
+  --ce-ink:#202B3C;
+  --ce-muted:#667486;
+  --ce-line:#DFE5EA;
+  --ce-bg:#FFFFFF;
+}
+body{background:var(--ce-bg);color:var(--ce-ink)}
+.nav{background:rgba(255,255,255,.96);border-bottom:1px solid var(--ce-line)}
+.nav.scrolled{background:rgba(255,255,255,.97);border-bottom-color:var(--ce-line)}
+.nav-links{color:#42556A}
+.nav-links a:hover{color:var(--ce-blue)}
+.nav-cta{background:var(--ce-blue)!important;color:#fff!important;box-shadow:0 10px 24px rgba(45,49,146,.16)}
+.hero{background:#F5FAFC}
+.hero h1{color:var(--ce-blue-dark)}
+.hero h1 span{color:var(--ce-green)!important}
+.hero p{color:#617184}
+.btn-primary{background:var(--ce-blue)!important;box-shadow:0 12px 25px rgba(45,49,146,.15)}
+.btn-secondary{color:var(--ce-blue)!important;border-color:#C8D1EC;background:#fff}
+.kicker{color:var(--ce-blue)!important}
+.hero-points .check{background:var(--ce-green-light);color:#278D3A}
+.t-icon{background:var(--ce-green-light)!important;color:var(--ce-blue)!important;border-color:#D4EBD7!important}
+.trust{background:#fff;border-color:var(--ce-line)}
+.trust-item{color:#607286;border-color:var(--ce-line)}
+.trust-item b{color:var(--ce-blue-dark)}
+.section-top h2,.offer h2,.why-card h3,.step h3,.area-list h3,.review-main h3,.review-card strong,.booking-copy h2,.modal-head h3{color:var(--ce-blue-dark)!important}
+.services{background:#fff}
+.service{border-color:var(--ce-line);box-shadow:0 12px 32px rgba(24,42,61,.06)}
+.service-copy a{color:var(--ce-green)!important}
+.offer{background:linear-gradient(120deg,#EEF8F0 0%,#F5FBFD 100%)}
+.offer-card{background:#fff;border-color:#D9E8DB}
+.offer-badge{background:var(--ce-blue);box-shadow:0 18px 35px rgba(45,49,146,.20)}
+.why{background:#F5FAFC}
+.why-card{border-color:var(--ce-line)}
+.iconbox{background:var(--ce-green-light);color:var(--ce-blue);border-color:#D4EBD7}
+.process{background:#fff}
+.step{border-color:var(--ce-line);background:#FBFCFD}
+.step .num{color:var(--ce-blue)}
+.gallery{background:#F5FAFC}
+.gallery-item{border-color:var(--ce-line)}
+.areas{background:#fff}
+.area-list{background:#F8FBFC;border-color:var(--ce-line)}
+.chip{border-color:#D7E3E9;color:var(--ce-blue-dark)}
+.reviews{background:#F5FAFC}
+.review-main,.review-card{border-color:var(--ce-line)}
+.faq{background:#fff}
+details{border-color:var(--ce-line);background:#FBFCFD}
+.booking{background:#EEF8F2}
+.booking-card{border-color:#D9E8DB}
+.field input,.field select,.field textarea{border-color:#D8E3E9;background:#fff}
+.form-note,.area-note{color:#7A8896}
+.float.call{background:#fff;color:var(--ce-blue)}
+.float.wa{background:#1CC96B;color:#fff}
+.social-icon.instagram{color:#D62976}
+.social-icon.facebook{color:#1877F2}
+.wa-pill{background:#EDF9F0;border-color:#C6E8CC;color:#2D9147}
+.footer-top .brand{color:#fff}
+footer{background:var(--ce-blue-dark)}
+.footer-links a:hover{color:#A8E5AF}
+.hero-image{box-shadow:0 22px 55px rgba(31,53,72,.12)}
+/* keep social icons in one compact row */
+.header-socials{display:flex;align-items:center;gap:7px}
+.social-icon{width:37px;height:37px;border-radius:11px}
+.wa-pill{height:37px}
+@media(max-width:620px){
+  .hero{padding-top:98px}
+  .hero-grid{gap:18px}
+  .hero h1{font-size:46px;letter-spacing:-2.2px}
+  .header-socials{gap:5px}
+  .social-icon{width:34px;height:34px}
+  .wa-pill{height:34px;width:34px;padding:0;justify-content:center}
+  .wa-pill span{display:none}
+}
+
+
+/* ===== FINAL LOGO FIT FIX =====
+   The logo keeps its natural aspect ratio and never gets cropped.
+*/
+.logo-link{
+  display:flex;
+  align-items:center;
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+}
+.logo-link img{
+  display:block;
+  width:188px !important;
+  height:auto !important;
+  max-width:188px;
+  object-fit:contain !important;
+  object-position:center;
+  aspect-ratio:auto;
+}
+.social-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  flex:0 0 auto;
+  margin-left:auto;
+}
+.social-icon{
+  width:36px !important;
+  height:36px !important;
+  flex:0 0 36px;
+}
+.nav-inner{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+@media(max-width:1120px){
+  .logo-link img{
+    width:170px !important;
+    max-width:170px;
+  }
+  .nav-links{gap:12px}
+}
+@media(max-width:1000px){
+  .nav-inner{min-height:68px;gap:7px}
+  .logo-link img{
+    width:155px !important;
+    max-width:155px;
+    height:auto !important;
+  }
+  .social-actions{margin-left:auto;gap:5px}
+  .social-icon{
+    width:34px !important;
+    height:34px !important;
+    flex-basis:34px;
+  }
+  .menu{
+    display:block;
+    flex:0 0 30px;
+    width:30px;
+    margin-left:1px;
+  }
+}
+@media(max-width:620px){
+  .container{width:calc(100% - 20px)}
+  .logo-link img{
+    width:142px !important;
+    max-width:142px;
+    height:auto !important;
+  }
+  .social-actions{gap:4px}
+  .social-icon{
+    width:32px !important;
+    height:32px !important;
+    flex-basis:32px;
+    border-radius:9px;
+  }
+  .social-icon svg{width:16px;height:16px}
+  .menu{width:28px;flex-basis:28px;font-size:22px}
+}
+
+
+.footer-top .logo-link img{
+  width:185px !important;
+  height:auto !important;
+  object-fit:contain !important;
+}
+@media(max-width:620px){
+  .footer-top .logo-link img{width:170px !important;height:auto !important}
+}
+
+
+/* === CleanEazy exact visual identity === */
+:root{
+  --blue:#2E3192 !important;
+  --blue2:#20246F !important;
+  --cyan:#2E3192 !important;
+  --green:#E63232 !important;
+  --navy:#20246F !important;
+  --ink:#243044 !important;
+  --muted:#6A7788 !important;
+  --line:#E2E6EB !important;
+  --bg:#FFFFFF !important;
+  --white:#FFFFFF !important;
+}
+body{background:#fff!important;color:#243044!important}
+.nav{background:rgba(255,255,255,.97)!important;border-bottom:1px solid #e2e6eb!important}
+.nav-links{color:#41526a!important}
+.nav-links a:hover{color:#2E3192!important}
+.nav-cta,.book{background:#2E3192!important;color:#fff!important;box-shadow:0 10px 24px rgba(46,49,146,.15)!important}
+.hero{background:linear-gradient(90deg,#f6f8fc 0%,#ffffff 70%)!important}
+.hero-copy h1,.hero h1{color:#20246F!important}
+.hero-copy h1 span,.hero h1 span{color:#2E3192!important}
+.kicker{color:#2E3192!important}
+.hero p{color:#637386!important}
+.hero-bullets .dot,.dot{background:#E63232!important;box-shadow:0 0 0 6px rgba(230,50,50,.08)!important}
+.hero-actions .btn-primary{background:#2E3192!important}
+.trust{background:#fff!important}
+.t-icon{background:#f2f3fb!important;color:#2E3192!important;border-color:#dee1f2!important}
+.trust-item b{color:#20246F!important}
+.section-top h2,.offer h2,.why-card h3,.step h3,.area-list h3,.review-main h3,.review-card strong,.booking-copy h2,.modal-head h3{color:#20246F!important}
+.service-copy a{color:#E63232!important}
+.offer{background:linear-gradient(120deg,#fff3f3,#f7f8fc)!important}
+.offer-card{border-color:#edd7d7!important}
+.offer-badge{background:#2E3192!important;box-shadow:0 18px 35px rgba(46,49,146,.18)!important}
+.iconbox{background:#f2f3fb!important;color:#2E3192!important;border-color:#dee1f2!important}
+.step .num{color:#2E3192!important}
+.chip{color:#20246F!important}
+.area-list .btn-primary,.booking-card .btn-primary{background:#2E3192!important}
+.social-icon.instagram{color:#D62976!important}
+.social-icon.facebook{color:#1877F2!important}
+.social-icon.whatsapp{color:#1EC76A!important}
+.wa-pill{color:#1a9b55!important;background:#eefaf1!important;border-color:#c7e8cf!important}
+.float.wa{background:#1EC76A!important}
+footer{background:#20246F!important}
+.footer-links a:hover{color:#E63232!important}
+.offer-copy strong{color:#20246F}
+.offer-copy .highlight-red{color:#E63232!important}
+
+
+/* Supplied logo is a wide wordmark: keep its full ratio on every screen. */
+.logo-link{height:54px;display:flex;align-items:center;flex:0 0 auto}
+.logo-link img{width:190px!important;height:auto!important;max-width:none!important;object-fit:contain!important}
+@media(max-width:1000px){
+  .logo-link{height:48px}
+  .logo-link img{width:165px!important}
+}
+@media(max-width:620px){
+  .logo-link{height:44px}
+  .logo-link img{width:150px!important}
+}
+
+
+/* === CleanEazy light-blue + red refinement === */
+:root{
+  --blue:#2E3192 !important;
+  --blue2:#252871 !important;
+  --cyan:#8CC9F2 !important;
+  --green:#55BDEB !important;
+  --red:#E53935 !important;
+  --navy:#20255F !important;
+  --ink:#253248 !important;
+  --muted:#68788A !important;
+  --line:#DCE8F0 !important;
+  --bg:#F8FCFF !important;
+}
+body{background:#F8FCFF!important}
+.nav{background:rgba(255,255,255,.97)!important;border-bottom-color:#E0EBF2!important}
+.nav-links a:hover{color:#2E3192!important}
+.nav-cta{background:#2E3192!important;box-shadow:0 10px 24px rgba(46,49,146,.14)!important}
+.hero{background:linear-gradient(110deg,#F3FAFE 0%,#FFFFFF 72%)!important}
+.hero h1,.hero-copy h1{color:#20255F!important}
+.hero h1 span,.hero-copy h1 span{color:#2E3192!important}
+.kicker{color:#2E3192!important}
+.hero-points .check{background:#EDF7FD!important;color:#2E3192!important}
+.btn-primary{background:#2E3192!important;box-shadow:0 12px 25px rgba(46,49,146,.14)!important}
+.btn-secondary{color:#2E3192!important;border-color:#C8DCEC!important}
+.trust{background:#FFFFFF!important}
+.t-icon{background:#EEF8FD!important;color:#2E3192!important;border-color:#D9EAF4!important}
+.section-top h2,.offer h2,.why-card h3,.step h3,.area-list h3,.review-main h3,.review-card strong,.booking-copy h2,.modal-head h3{color:#20255F!important}
+.service-copy a{color:#E53935!important}
+.offer{background:linear-gradient(120deg,#EFF9FF 0%,#FFF7F7 100%)!important}
+.offer-card{border-color:#E6E3E8!important}
+.offer-badge{background:#2E3192!important;box-shadow:0 16px 32px rgba(46,49,146,.16)!important}
+.iconbox{background:#EEF8FD!important;color:#2E3192!important;border-color:#D9EAF4!important}
+.step .num{color:#2E3192!important}
+.gallery,.why,.reviews{background:#F8FCFF!important}
+.area-list{background:#F8FCFE!important}
+.chip{color:#2E3192!important}
+.area-list .btn-primary,.booking-card .btn-primary{background:#2E3192!important}
+.footer{background:#20255F!important}
+footer{background:#20255F!important}
+.footer-links a:hover{color:#E53935!important}
+.social-icon.instagram{color:#E1306C!important}
+.social-icon.facebook{color:#1877F2!important}
+.wa-pill{background:#F0FBF5!important;color:#169C57!important;border-color:#CBEAD8!important}
+.float.wa{background:#20C96B!important}
+.float.call{color:#2E3192!important}
+.offer-copy strong{color:#20255F!important}
+.offer-copy .highlight-red{color:#E53935!important}
+/* Keep red restrained: only highlights, not large surfaces. */
+
+
+/* === More Red — CleanEazy brand refinement === */
+:root{
+  --ce-red:#E53935 !important;
+  --ce-red-dark:#C62828 !important;
+  --ce-red-soft:#FFF0F0 !important;
+  --ce-blue-soft:#EEF7FD !important;
+}
+.hero h1 span,.hero-copy h1 span{
+  color:var(--ce-red)!important;
+}
+.service-copy a{
+  color:var(--ce-red)!important;
+}
+.offer{
+  background:linear-gradient(120deg,#EEF8FF 0%,#FFF1F1 100%)!important;
+}
+.offer-badge{
+  background:linear-gradient(145deg,var(--ce-red),var(--ce-red-dark))!important;
+  box-shadow:0 16px 32px rgba(229,57,53,.18)!important;
+}
+.offer-copy h2 .highlight-red{
+  color:var(--ce-red)!important;
+}
+.why-card:hover{
+  border-color:#F1C4C4!important;
+  box-shadow:0 14px 34px rgba(229,57,53,.08)!important;
+}
+.iconbox.red{
+  background:var(--ce-red-soft)!important;
+  color:var(--ce-red)!important;
+  border-color:#F2CCCC!important;
+}
+.section-top h2 .red-text{
+  color:var(--ce-red)!important;
+}
+.chip.red{
+  background:var(--ce-red-soft)!important;
+  border-color:#F0CACA!important;
+  color:var(--ce-red-dark)!important;
+}
+.booking-card .btn-primary,
+.area-list .btn-primary{
+  background:linear-gradient(135deg,#2E3192,#3C46A3)!important;
+}
+.nav-cta{
+  background:linear-gradient(135deg,#2E3192,#3943A0)!important;
+}
+.social-icon.instagram{color:#E1306C!important}
+.social-icon.facebook{color:#1877F2!important}
+.wa-pill{
+  color:#159447!important;
+  background:#EDF9F1!important;
+  border-color:#C8E8D0!important;
+}
+.float.wa{background:#1FCB69!important}
+.footer-links a:hover{color:var(--ce-red)!important}
+.photo-label{
+  border-left:3px solid var(--ce-red)!important;
+}
+.kicker:after{
+  content:"";
+  display:inline-block;
+  width:18px;
+  height:2px;
+  margin-left:7px;
+  vertical-align:middle;
+  background:var(--ce-red);
+  border-radius:2px;
+}
+@media(max-width:620px){
+  .hero h1 span,.hero-copy h1 span{color:var(--ce-red)!important}
+}
+
+
+/* === Curated laundry photography treatment === */
+.hero-image img,.why-image img,.gallery-item img,.service img{object-position:center}
+.service:after{background:linear-gradient(0deg,rgba(5,25,42,.82),rgba(5,25,42,.02) 66%)}
+.gallery-item:after{background:linear-gradient(0deg,rgba(3,18,31,.24),transparent 58%)}
+.photo-label{background:rgba(32,37,95,.84)!important;border-left:3px solid #E53935;padding-left:13px}
+
+
+/* User-supplied CleanEazy photos */
+.hero-image img,.service-img img{object-position:center center}
+
+
+/* Final placement for user's six supplied photos */
+.hero-photo img{object-position:center center}
+.service-img img{object-position:center center}
+
+
+@media(max-width:620px){
+  .hero-photo{min-height:360px}
+  .service-img{height:180px}
+}
+
+</style>
+</head>
+
+<body>
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="logo-link" href="#home" aria-label="CleanEazy Laundry home">
+      <img src="cleaneazy-logo.jpg" alt="CleanEazy Laundry logo">
+    </a>
+    <nav class="nav-links">
+      <a href="#services">Services</a>
+      <a href="#why">Why CleanEazy</a>
+      <a href="#process">How It Works</a>
+      <a href="#areas">Service Areas</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#faq">FAQ</a>
+      <a href="#booking">Contact</a>
+    </nav>
+    <div class="social-actions" aria-label="Social and booking links">
+      <a class="social-icon instagram" href="https://www.instagram.com/cleanezy.laundry/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.4 2h9.2A5.4 5.4 0 0 1 22 7.4v9.2a5.4 5.4 0 0 1-5.4 5.4H7.4A5.4 5.4 0 0 1 2 16.6V7.4A5.4 5.4 0 0 1 7.4 2Zm0 2A3.4 3.4 0 0 0 4 7.4v9.2A3.4 3.4 0 0 0 7.4 20h9.2a3.4 3.4 0 0 0 3.4-3.4V7.4A3.4 3.4 0 0 0 16.6 4H7.4Zm4.6 2.7a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6Zm0 2a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Zm5.5-2.2a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z"/></svg>
+      </a>
+      <a class="social-icon facebook" href="https://www.facebook.com/151853171347587" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.88.25-1.48 1.54-1.48h1.7V3.96c-.3-.04-1.28-.14-2.46-.14-2.43 0-4.08 1.49-4.08 4.21V10H8v3h2.2v8h3.3Z"/></svg>
+      </a>
+      <a class="social-icon whatsapp" href="https://wa.me/919145554242" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 3.9A10 10 0 0 0 3.4 16.1L2 21.8l5.8-1.5A10 10 0 1 0 20 3.9Zm-8 16.2c-1.6 0-3.2-.4-4.6-1.2l-.3-.2-3.4.9.9-3.3-.2-.3a8 8 0 1 1 7.6 4.1Zm4.4-6c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1-.1.2-.5.7-.6.8-.1.1-.2.2-.5.1a7 7 0 0 1-2.1-1.3 7.8 7.8 0 0 1-1.4-1.7c-.1-.2 0-.3.1-.4l.4-.5c.1-.1.1-.2.2-.3.1-.1 0-.3 0-.4l-.6-1.5c-.2-.4-.3-.3-.5-.3h-.4c-.1 0-.4.1-.5.3-.2.2-.7.7-.7 1.7s.7 2 .8 2.1c.1.1 1.4 2.1 3.4 3 .5.2.9.4 1.2.5.5.2 1 .2 1.4.1.4-.1 1.2-.5 1.3-1 .2-.4.2-.9.1-1-.1-.1-.2-.1-.4-.2Z"/></svg>
+      </a>
+      <a class="book" href="#booking" data-book>Book a Pickup</a>
+    </div>
+    <button class="menu" id="menu" aria-label="Open menu">☰</button>
+  </div>
+</header>
+
+<main id="home">
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="hero-copy reveal">
+      <div class="kicker">PREMIUM LAUNDRY CARE • PUNE</div>
+      <h1>Fresh Clothes<br><span>Brighter Days</span></h1>
+      <p>Professional laundry & dry cleaning services for homes, students, working professionals and families in Pune.</p>
+      <div class="hero-bullets">
+        <span><i class="dot"></i> Doorstep Pickup & Delivery</span>
+        <span><i class="dot"></i> Quality Checked</span>
+        <span><i class="dot"></i> Hygienic Processing</span>
+        <span><i class="dot"></i> Easy Booking</span>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#booking" data-book>Book a Pickup Now →</a>
+        <a class="btn btn-secondary" href="#services">View Our Services</a>
+      </div>
+    </div>
+    <div class="hero-photo reveal">
+      <img src="images/hero.webp" alt="Freshly folded clean clothes">
+      <div class="handwritten">Laundry<br>Today<br>Happiness<br>Tomorrow ♥</div>
+      <div class="hero-photo-label">Fresh clothes. Easy routine.</div>
+    </div>
+  </div>
+</section>
+
+<div class="trust">
+  <div class="container trust-grid">
+    <div class="trust-item"><span class="t-icon">⌂</span><div><b>Doorstep</b>Pickup & Delivery</div></div>
+    <div class="trust-item"><span class="t-icon">✓</span><div><b>Quality</b>Checked</div></div>
+    <div class="trust-item"><span class="t-icon">✦</span><div><b>Hygiene-focused</b>Processing</div></div>
+    <div class="trust-item"><span class="t-icon">↗</span><div><b>Easy</b>Booking</div></div>
+  </div>
+</div>
+
+<section class="services" id="services">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">Our Services</div><h2>Complete Laundry for Every Need</h2><p>Simple, professional care for everyday clothes, home linen and special items.</p></div>
+    <div class="service-grid">
+      <article class="service reveal"><div class="service-img"><img src="images/wash-fold.webp" alt="CleanEazy Wash and Fold"></div><div class="service-body"><h3>Wash & Fold</h3><p>Everyday clothes, clean and neatly folded.</p><a href="#booking" data-book>Book service →</a></div></article>
+      <article class="service reveal"><div class="service-img"><img src="images/wash-iron.webp" alt="CleanEazy Wash and Iron"></div><div class="service-body"><h3>Wash & Iron</h3><p>Clean clothes with a crisp finish.</p><a href="#booking" data-book>Book service →</a></div></article>
+      <article class="service reveal"><div class="service-img"><img src="images/dry-cleaning.webp" alt="CleanEazy Dry Cleaning"></div><div class="service-body"><h3>Dry Cleaning</h3><p>For clothes that need delicate cleaning.</p><a href="#booking" data-book>Book service →</a></div></article>
+      <article class="service reveal"><div class="service-img"><img src="images/blankets-curtains.webp" alt="CleanEazy Blankets and Curtains"></div><div class="service-body"><h3>Blankets & Curtains</h3><p>Deep cleaning for larger fabric items.</p><a href="#booking" data-book>Book service →</a></div></article>
+      <article class="service reveal"><div class="service-img"><img src="images/shoes-bags.webp" alt="CleanEazy Shoes and Bags Cleaning"></div><div class="service-body"><h3>Shoes & Bags</h3><p>Professional cleaning for everyday essentials.</p><a href="#booking" data-book>Book service →</a></div></article>
+      <article class="service reveal"><div class="service-img"><img src="https://images.unsplash.com/photo-1722097981809-042e0467ba12?auto=format&fit=crop&w=1200&q=84" alt="Clean home textiles"></div><div class="service-body"><h3>Home Linen</h3><p>Clean care for bedding and household fabrics.</p><a href="#booking" data-book>Book service →</a></div></article>
+    </div>
+  </div>
+</section>
+
+<section class="welcome">
+  <div class="container">
+    <div class="offer reveal">
+      <div>
+        <div class="kicker">WELCOME TO CLEANEAZY</div>
+        <h2>GET <span class="highlight-red">25% OFF</span></h2>
+        <p><strong>ON YOUR FIRST ORDER</strong><br>New-customer welcome offer. Eligibility, validity and exclusions follow the current CleanEazy offer terms.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="#booking" data-book>Claim Welcome Offer →</a></div>
+      </div>
+      <div class="offer-badge"><div><strong>25%</strong><span>WELCOME OFFER</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="why" id="why">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">Why CleanEazy</div><h2>Clean Clothes. Happy Lives.</h2><p>A modern laundry service should be simple, clear and easy to use.</p></div>
+    <div class="why-grid">
+      <div class="why-photo reveal"><img src="https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?auto=format&fit=crop&w=1400&q=84" alt="Commercial laundry machines"></div>
+      <div class="why-cards">
+        <article class="why-card reveal"><div class="iconbox">◌</div><h3>Professional Process</h3><p>Organised cleaning and finishing for a consistent service journey.</p></article>
+        <article class="why-card reveal"><div class="iconbox">⌂</div><h3>Doorstep Convenience</h3><p>Pickup and delivery designed to save time.</p></article>
+        <article class="why-card reveal"><div class="iconbox">✓</div><h3>Quality Checked</h3><p>A final presentation check before return.</p></article>
+        <article class="why-card reveal"><div class="iconbox">◇</div><h3>Hygiene-focused</h3><p>Clean handling and an orderly workflow.</p></article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="process" id="process">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">How It Works</div><h2>From Pickup to Delivery</h2><p>A simple view of the laundry journey.</p></div>
+    <div class="timeline">
+      <div class="step reveal"><div class="num">01</div><h3>Pickup</h3><p>Collection from your location.</p></div>
+      <div class="step reveal"><div class="num">02</div><h3>Sorting</h3><p>Items organised for processing.</p></div>
+      <div class="step reveal"><div class="num">03</div><h3>Stain Check</h3><p>Visible marks reviewed.</p></div>
+      <div class="step reveal"><div class="num">04</div><h3>Cleaning</h3><p>Selected process applied.</p></div>
+      <div class="step reveal"><div class="num">05</div><h3>Drying</h3><p>Handled for the service.</p></div>
+      <div class="step reveal"><div class="num">06</div><h3>Finish</h3><p>Iron or finishing where needed.</p></div>
+      <div class="step reveal"><div class="num">07</div><h3>Quality Check</h3><p>Final presentation check.</p></div>
+      <div class="step reveal"><div class="num">08</div><h3>Packing</h3><p>Prepared for return.</p></div>
+      <div class="step reveal"><div class="num">09</div><h3>Delivery</h3><p>Clean clothes returned.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="gallery">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">Laundry in Action</div><h2>Fresh, Clean & Ready</h2><p>Clean visuals focused on laundry, ironing, finishing and neatly prepared clothes.</p></div>
+    <div class="gallery-grid">
+      <div class="gallery-item reveal"><img loading="lazy" src="https://images.unsplash.com/photo-1741183394647-fc7ef074dbc5?auto=format&fit=crop&w=1800&q=86" alt="Laundry machines"><span>Modern Laundry</span></div>
+      <div class="gallery-item reveal"><img loading="lazy" src="https://images.unsplash.com/photo-1758279744970-b32360a5e907?auto=format&fit=crop&w=1200&q=84" alt="CleanEazy Wash and Iron"><span>Iron & Finish</span></div>
+      <div class="gallery-item reveal"><img loading="lazy" src="https://images.unsplash.com/photo-1722097981809-042e0467ba12?auto=format&fit=crop&w=1200&q=84" alt="Folded clothes"><span>Fresh & Folded</span></div>
+      <div class="gallery-item reveal"><img loading="lazy" src="https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?auto=format&fit=crop&w=1400&q=84" alt="Laundry facility"><span>Wash Process</span></div>
+      <div class="gallery-item reveal"><img loading="lazy" src="https://images.unsplash.com/photo-1741183394647-fc7ef074dbc5?auto=format&fit=crop&w=1800&q=86" alt="Clean garments"><span>Ready to Wear</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="areas" id="areas">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">Our Locations</div><h2>CleanEazy Pickup & Delivery in Pune</h2><p>Current website areas are shown below. Exact pickup availability should be confirmed for the address.</p></div>
+    <div class="area-grid">
+      <div class="area-photo reveal"><img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1400&q=84" alt="Pune city"></div>
+      <div class="area-panel reveal">
+        <h3>Current service areas</h3>
+        <div class="chips">
+          <span class="chip">Katraj</span><span class="chip">Gokulnagar</span><span class="chip">Kondhwa Budruk</span><span class="chip">Kalepadal</span><span class="chip">Hadapsar</span>
+        </div>
+        <p>Don't see your area? Send your address through the booking form and the team can confirm availability.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="#booking" data-book>Check Your Area →</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reviews" id="reviews">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">Reviews</div><h2>Real reviews only.</h2><p>No fabricated ratings or testimonials. Add verified Google reviews when available.</p></div>
+    <div class="review-grid">
+      <div class="review-main reveal"><div class="stars">★★★★★</div><h3>Google reviews can be connected here.</h3><p>This area is intentionally kept honest until a verified Google review link and genuine customer feedback are added.</p><div class="hero-actions"><a class="btn btn-secondary" href="#booking">Book Your Service →</a></div></div>
+      <div><div class="review-card reveal"><div class="stars">◎</div><strong>Google review link</strong><p>Add the official review URL when available.</p></div><div class="review-card reveal" style="margin-top:12px"><div class="stars">◎</div><strong>Customer testimonials</strong><p>Replace with real customer comments.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-head reveal"><div class="kicker">FAQ</div><h2>Frequently Asked Questions</h2></div>
+    <div class="faq-list">
+      <details class="reveal"><summary>How do I schedule a pickup?</summary><p>Tap “Book a Pickup”, fill in your details and continue to WhatsApp. The team can confirm the request and availability.</p></details>
+      <details class="reveal"><summary>How long does delivery take?</summary><p>Timing depends on the service and current workload. Confirm the expected turnaround during booking.</p></details>
+      <details class="reveal"><summary>Do you provide dry cleaning?</summary><p>Yes. Dry cleaning is listed as one of the CleanEazy services.</p></details>
+      <details class="reveal"><summary>Which areas do you serve?</summary><p>Current website areas include Katraj, Gokulnagar, Kondhwa Budruk, Kalepadal and Hadapsar. Exact availability should be confirmed for the address.</p></details>
+      <details class="reveal"><summary>What payment methods are accepted?</summary><p>Please confirm the currently accepted payment method with the CleanEazy team while booking.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="booking" id="booking">
+  <div class="container booking-grid">
+    <div class="booking-copy reveal">
+      <div class="kicker">Book a Pickup</div><h2>Fresh clothes are a few clicks away.</h2>
+      <p>Fill the form, then continue to WhatsApp with a ready-made booking message. The website does not show a booking confirmation before the message is sent.</p>
+      <div class="contacts">
+        <div class="contact"><b>Call / WhatsApp</b><span>+91 91455 54242</span></div>
+        <div class="contact"><b>Instagram</b><span>@cleanezy.laundry</span></div>
+        <div class="contact"><b>Facebook</b><span>CleanEzy Laundry</span></div>
+        <div class="contact"><b>Branch 1</b><span>Dream Rachna Building, Shop No. 12, Kalepadal, Hadapsar, Pune • +91 91455 54242</span></div>
+        <div class="contact"><b>Branch 2</b><span>Near Shankar Mandir, Gokulnagar, Katraj–Kondhwa Road, Pune • +91 91455 54242</span></div>
+      </div>
+    </div>
+    <form class="form reveal" id="bookingForm">
+      <div class="fields">
+        <div class="field"><label>Name</label><input id="name" required placeholder="Your name"></div>
+        <div class="field"><label>Mobile</label><input id="mobile" required inputmode="tel" placeholder="10-digit number"></div>
+        <div class="field"><label>Service</label><select id="service" required><option value="">Select service</option><option>Wash & Fold</option><option>Wash & Iron</option><option>Dry Cleaning</option><option>Steam Press</option><option>Shoes & Bags</option><option>Home Linen</option><option>Delicate Laundry</option><option>Special Laundry</option></select></div>
+        <div class="field"><label>Preferred Time</label><select id="time"><option>Any convenient time</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        <div class="field full"><label>Pickup Area / Address</label><textarea id="address" required placeholder="Enter your pickup address"></textarea></div>
+        <div class="field full"><label>Special Note</label><input id="note" placeholder="Anything the team should know?"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Continue to WhatsApp →</button>
+      <div class="form-note">WhatsApp opens with a pre-filled message. The customer reviews it and taps Send.</div>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-top">
+      <div><a class="logo-link" href="#home"><img src="cleaneazy-logo.jpg" alt="CleanEazy Laundry logo"></a><p style="margin-top:9px;color:#b2c7d5;font-size:11px;max-width:310px">Clean Clothes. Happy Lives. Professional laundry and dry cleaning in Pune.</p></div>
+      <div class="footer-grid">
+        <div><div class="ft-title">Quick Links</div><div class="ft-links"><a href="#services">Services</a><a href="#why">Why CleanEazy</a><a href="#process">How It Works</a><a href="#areas">Service Areas</a><a href="#faq">FAQ</a></div></div>
+        <div><div class="ft-title">Contact</div><div class="ft-links"><a href="https://wa.me/919145554242" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.instagram.com/cleanezy.laundry/" target="_blank" rel="noopener">Instagram</a><a href="https://www.facebook.com/151853171347587" target="_blank" rel="noopener">Facebook</a></div></div>
+        <div><div class="ft-title">Services</div><div class="ft-links"><span>Wash & Fold</span><span>Wash & Iron</span><span>Dry Cleaning</span><span>Steam Press</span><span>Home Linen</span></div></div>
+      </div>
+    </div>
+    <div class="bottom">© 2026 CleanEazy Laundry. Privacy Policy • Terms • Cancellation / Refund Policy should use your business-approved final wording.</div>
+  </div>
+</footer>
+
+<div class="floaters"><a class="float wa" href="https://wa.me/919145554242" target="_blank" rel="noopener" aria-label="WhatsApp CleanEazy">✆</a></div>
+
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head"><div><h3>Book a Pickup</h3><p>Enter your details, then continue to WhatsApp.</p></div><button class="close" id="close" aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <form class="form" id="modalForm">
+        <div class="fields">
+          <div class="field"><label>Name</label><input id="mName" required></div><div class="field"><label>Mobile</label><input id="mMobile" required inputmode="tel"></div>
+          <div class="field"><label>Service</label><select id="mService" required><option value="">Select service</option><option>Wash & Fold</option><option>Wash & Iron</option><option>Dry Cleaning</option><option>Steam Press</option><option>Shoes & Bags</option><option>Home Linen</option><option>Delicate Laundry</option><option>Special Laundry</option></select></div>
+          <div class="field"><label>Preferred Time</label><select id="mTime"><option>Any convenient time</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+          <div class="field full"><label>Pickup Area / Address</label><textarea id="mAddress" required></textarea></div><div class="field full"><label>Special Note</label><input id="mNote"></div>
+        </div>
+        <button class="btn btn-primary" type="submit">Continue to WhatsApp →</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const nav=document.getElementById('nav'), menu=document.getElementById('menu');
+menu.addEventListener('click',()=>nav.classList.toggle('open'));
+document.querySelectorAll('.nav-links a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
+
+const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('show');io.unobserve(e.target)}}),{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+const modal=document.getElementById('modal');
+function openModal(){modal.classList.add('show');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
+function closeModal(){modal.classList.remove('show');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+document.querySelectorAll('[data-book]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openModal()}));
+document.getElementById('close').addEventListener('click',closeModal);
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('show'))closeModal()});
+
+function buildWA(prefix){
+  const v=id=>(document.getElementById(prefix+id)?.value||'').trim();
+  const msg=`*CleanEazy Laundry — Pickup Booking*\\n\\n*Name:* ${v('Name')}\\n*Mobile:* ${v('Mobile')}\\n*Service:* ${v('Service')}\\n*Preferred Time:* ${v('Time')}\\n*Pickup Address:* ${v('Address')}\\n*Special Note:* ${v('Note')||'None'}`;
+  return 'https://wa.me/919145554242?text='+encodeURIComponent(msg);
+}
+document.getElementById('bookingForm').addEventListener('submit',e=>{e.preventDefault();location.href=buildWA('')});
+document.getElementById('modalForm').addEventListener('submit',e=>{e.preventDefault();location.href=buildWA('m')});
+</script>
+</body>
+</html>
