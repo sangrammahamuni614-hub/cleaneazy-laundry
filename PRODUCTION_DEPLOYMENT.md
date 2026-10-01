@@ -7,13 +7,10 @@ It is responsive and is designed for Android Chrome, iPhone Safari, desktop Chro
 For GitHub Pages, publish the repository root from the `main` branch. The application path is:
 `/software/`
 
-Target production URL:
-`https://cleaneazy.in/software/`
-
-Fallback GitHub Pages URL:
+Canonical production URL:
 `https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/`
 
-The repository contains `CNAME = cleaneazy.in`. For the custom domain to serve the app, GitHub Pages must have the custom domain configured and GoDaddy DNS must point the apex domain to GitHub Pages. GitHub documents the apex A records as `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, and `185.199.111.153`, with optional IPv6 AAAA records. HTTPS can then be enforced by GitHub Pages after certificate issuance. DNS propagation can take time; this repo cannot change GoDaddy DNS with the available integration.
+Custom domain is intentionally not used. The `CNAME` file has been removed from the repository and the GitHub Pages custom domain has been removed. Do not point `cleaneazy.in` to this application unless a custom domain is intentionally re-enabled later.
 
 ## Supabase
 Project ref: `jcckvihjumqdmkcbaebo`
