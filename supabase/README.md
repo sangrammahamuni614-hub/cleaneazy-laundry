@@ -43,7 +43,7 @@ Balance: ₹{{6}}
 {{7}}
 Thank you for choosing CleanEazy Laundry.
 
-The frontend queues messages in whatsapp_messages. The Edge Function sends them via the Meta Graph API. The webhook records provider status such as sent/delivered/read/failed.
+The frontend queues messages in whatsapp_messages. The Edge Function claims pending rows, sends them through the Meta Graph API, records sent/failed state, errors, attempt counts, and retry timestamps, and the webhook records provider status such as sent/delivered/read/failed.
 
 ## Important deployment note
 Supabase Edge Function secrets and Meta Business Manager/WhatsApp template approvals must be configured in the owner's accounts. These account-level settings cannot be safely hard-coded into a public source repository.
@@ -52,4 +52,6 @@ Supabase Edge Function secrets and Meta Business Manager/WhatsApp template appro
 ## Cron
 Supabase Cron job: `cleaneazy-reminders-hourly`
 Schedule: `5 * * * *` (hourly, minute 5)
-The job calls `queue_due_reminders()` and then invokes `send-whatsapp` using a secret generated in Supabase Vault.
+The job calls `queue_due_reminders()` and then invokes `send-whatsapp` using a secret generated in Supabase Vault. The cron secret is passed in the `x-cron-secret` request header, not in the URL.
+## Payment hardening
+The database payment RPC rejects zero/negative amounts and rejects payments larger than the current outstanding balance. Order and payment idempotency keys are backed by unique database indexes.
