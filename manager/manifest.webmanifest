@@ -1,0 +1,20 @@
+{
+  "name": "CleanEazy Laundry Manager",
+  "short_name": "CleanEazy",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f7fb",
+  "theme_color": "#18245d",
+  "description": "Cloud laundry management for CleanEazy.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
