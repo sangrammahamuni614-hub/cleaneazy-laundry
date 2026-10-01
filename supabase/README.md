@@ -8,7 +8,7 @@ Project: jcckvihjumqdmkcbaebo
 - RPC: change_order_status
 - RPC: record_laundry_payment
 - RPC: order_outstanding
-- Edge Function: send-whatsapp (JWT required)
+- Edge Function: send-whatsapp (function-level auth: signed-in Supabase user or Vault-backed cron secret; gateway JWT verification disabled so the hourly cron can call it securely)
 - Edge Function: whatsapp-webhook (Meta webhook; JWT disabled because Meta calls it directly)
 
 ## WhatsApp Cloud API configuration
@@ -47,3 +47,9 @@ The frontend queues messages in whatsapp_messages. The Edge Function sends them 
 
 ## Important deployment note
 Supabase Edge Function secrets and Meta Business Manager/WhatsApp template approvals must be configured in the owner's accounts. These account-level settings cannot be safely hard-coded into a public source repository.
+
+
+## Cron
+Supabase Cron job: `cleaneazy-reminders-hourly`
+Schedule: `5 * * * *` (hourly, minute 5)
+The job calls `queue_due_reminders()` and then invokes `send-whatsapp` using a secret generated in Supabase Vault.
