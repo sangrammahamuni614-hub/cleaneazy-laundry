@@ -7,7 +7,13 @@ It is responsive and is designed for Android Chrome, iPhone Safari, desktop Chro
 For GitHub Pages, publish the repository root from the `main` branch. The application path is:
 `/software/`
 
-Because the repository currently contains `CNAME = cleaneazy.in`, the GoDaddy DNS for `cleaneazy.in` must point to GitHub Pages before that custom domain will serve the app. The alternative GitHub Pages URL is the repository's GitHub Pages hostname once Pages is enabled.
+Target production URL:
+`https://cleaneazy.in/software/`
+
+Fallback GitHub Pages URL:
+`https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/`
+
+The repository contains `CNAME = cleaneazy.in`. For the custom domain to serve the app, GitHub Pages must have the custom domain configured and GoDaddy DNS must point the apex domain to GitHub Pages. GitHub documents the apex A records as `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, and `185.199.111.153`, with optional IPv6 AAAA records. HTTPS can then be enforced by GitHub Pages after certificate issuance. DNS propagation can take time; this repo cannot change GoDaddy DNS with the available integration.
 
 ## Supabase
 Project ref: `jcckvihjumqdmkcbaebo`
@@ -56,7 +62,9 @@ Verify token: same value as `WHATSAPP_VERIFY_TOKEN`
 Subscribe to the message status events needed by the WhatsApp Cloud API integration. The webhook updates queued message rows with sent/delivered/read/failed state.
 
 ## Scheduler
-The app queues WhatsApp messages reliably in the cloud. Automatic recurring reminder execution (such as subscription-expiry reminders without opening the app) requires a server scheduler/cron to invoke the worker. The Edge Function already supports queue processing; the final account-level scheduler/secret configuration must be enabled in the owner's Supabase environment.
+Supabase Cron job: `cleaneazy-reminders-hourly`
+Schedule: `5 * * * *`
+The live job calls `queue_due_reminders()` and invokes `send-whatsapp` through `pg_net`. The internal cron secret is generated and stored in Supabase Vault and is passed to the worker in the `x-cron-secret` header, not in the URL.
 
 ## Security
 Do not commit Meta access tokens, phone-number credentials, Supabase service-role keys, or other secrets into this public repository.
