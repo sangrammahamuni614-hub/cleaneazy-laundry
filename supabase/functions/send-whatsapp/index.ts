@@ -14,7 +14,7 @@ const sb=createClient(url,key,{auth:{persistSession:false}});
 const bearerUser=await user(req,sb);
 let cronAuthorized=false;
 if(!bearerUser){
-  const cronSecret=req.headers.get("x-cron-secret")||new URL(req.url).searchParams.get("cron_secret")||"";
+  const cronSecret=req.headers.get("x-cron-secret")||"";
   if(cronSecret){
     const vr=await sb.rpc("verify_cron_secret",{p_secret:cronSecret});
     cronAuthorized=vr.data===true;
