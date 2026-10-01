@@ -114,6 +114,7 @@ returns boolean language sql stable security definer set search_path=public,vaul
  select coalesce((select decrypted_secret=p_secret from vault.decrypted_secrets where name='cleaneazy_cron_secret' limit 1),false);
 $$;
 revoke all on function public.verify_cron_secret(text) from public,anon,authenticated;
+grant execute on function public.verify_cron_secret(text) to service_role;
 
 create or replace function public.queue_due_reminders()
 returns integer language plpgsql security definer set search_path=public as $$
@@ -191,11 +192,11 @@ select cron.schedule(
  $job$
    select public.queue_due_reminders();
    select net.http_post(
-     url:='https://jcckvihjumqdmkcbaebo.supabase.co/functions/v1/send-whatsapp',
+     url:='https://jcckvihjumqdmkcbaebo.supabase.co/functions/v1/send-whatsapp?cron_secret=' ||
+     (select decrypted_secret from vault.decrypted_secrets where name='cleaneazy_cron_secret' limit 1),
      headers:=jsonb_build_object(
        'Content-Type','application/json',
-       'apikey','sb_publishable_60V5TTfgADs2RwN_WAZSXw_VLTxbyJQ',
-       'x-cron-secret',(select decrypted_secret from vault.decrypted_secrets where name='cleaneazy_cron_secret' limit 1)
+       'apikey','sb_publishable_60V5TTfgADs2RwN_WAZSXw_VLTxbyJQ'
      ),
      body:='{"limit":50}'::jsonb,
      timeout_milliseconds:=10000
