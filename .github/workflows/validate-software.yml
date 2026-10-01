@@ -1,0 +1,31 @@
+name: Validate CleanEazy Software
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate application JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('software/index.html','utf8');
+          const scripts = [...html.matchAll(/<script(?:[^>]*)>([\s\S]*?)<\/script>/gi)]
+            .map(m => m[1])
+            .filter(s => s.includes("supabase.createClient"));
+          if (scripts.length !== 1) throw new Error("Expected exactly one inline application script");
+          fs.writeFileSync('/tmp/app.js', scripts[0]);
+          NODE
+          node --check /tmp/app.js
+      - name: Verify PWA files
+        run: |
+          test -f software/manifest.webmanifest
+          test -f software/sw.js
+          test -f software/icon.svg
