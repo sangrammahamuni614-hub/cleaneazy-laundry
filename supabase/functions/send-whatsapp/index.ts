@@ -10,7 +10,17 @@ async function user(req:Request,sb:any){const h=req.headers.get("Authorization")
 const phone=(x:string)=>x.replace(/\D/g,"").slice(-10);
 Deno.serve(async(req:Request)=>{if(req.method==="OPTIONS")return new Response("ok",{headers:CORS});if(req.method!=="POST")return reply({error:"POST required"},405);
 const m=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}"),key=m.default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),url=Deno.env.get("SUPABASE_URL");if(!key||!url)return reply({error:"Supabase secret unavailable"},500);
-const sb=createClient(url,key,{auth:{persistSession:false}});if(!await user(req,sb))return reply({error:"Unauthorized"},401);const body=await req.json().catch(()=>({}));let q=sb.from("whatsapp_messages").select("*").eq("status","pending").lte("next_attempt_at",new Date().toISOString()).order("created_at",{ascending:true}).limit(Math.min(Number(body.limit||10),50));if(body.message_id)q=sb.from("whatsapp_messages").select("*").eq("id",Number(body.message_id));const r=await q;if(r.error)return reply({error:r.error.message},500);
+const sb=createClient(url,key,{auth:{persistSession:false}});
+const bearerUser=await user(req,sb);
+let cronAuthorized=false;
+if(!bearerUser){
+  const cronSecret=req.headers.get("x-cron-secret")||"";
+  if(cronSecret){
+    const vr=await sb.rpc("verify_cron_secret",{p_secret:cronSecret});
+    cronAuthorized=vr.data===true;
+  }
+}
+if(!bearerUser&&!cronAuthorized)return reply({error:"Unauthorized"},401);const body=await req.json().catch(()=>({}));let q=sb.from("whatsapp_messages").select("*").eq("status","pending").lte("next_attempt_at",new Date().toISOString()).order("created_at",{ascending:true}).limit(Math.min(Number(body.limit||10),50));if(body.message_id)q=sb.from("whatsapp_messages").select("*").eq("id",Number(body.message_id));const r=await q;if(r.error)return reply({error:r.error.message},500);
 const pid=Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")||"",token=Deno.env.get("WHATSAPP_ACCESS_TOKEN")||"",ver=Deno.env.get("WHATSAPP_API_VERSION")||"v23.0";if(!pid||!token)return reply({error:"Meta WhatsApp Cloud API is not configured",code:"WHATSAPP_NOT_CONFIGURED"},503);
 const results:any[]=[];for(const msg of r.data||[]){const c=(await sb.from("customers").select("*").eq("id",msg.customer_id).maybeSingle()).data;const o=msg.order_id?(await sb.from("orders").select("*").eq("id",msg.order_id).maybeSingle()).data:null;if(!c){results.push({id:msg.id,ok:false,error:"Customer not found"});continue}const to=phone(c.whatsapp_number_normalized||c.whatsapp_number||msg.recipient||"");if(to.length!==10){results.push({id:msg.id,ok:false,error:"Invalid WhatsApp number"});continue}const t=ENV[msg.event]?Deno.env.get(ENV[msg.event]):null;if(!t){results.push({id:msg.id,ok:false,error:"Template not configured for "+msg.event});continue}
 const total=o?Number(o.total_amount||0).toFixed(2):"0.00",paid=o?Number(o.paid_amount||0).toFixed(2):"0.00",bal=o?Math.max(Number(o.total_amount||0)-Number(o.paid_amount||0),0).toFixed(2):"0.00";const last=msg.event==="payment_confirmation"?"Payment: ₹"+Number((msg.payload||{}).payment_amount||0).toFixed(2):"Expected delivery: "+(o?.expected_delivery_date||"");
