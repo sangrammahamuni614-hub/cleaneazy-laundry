@@ -29,6 +29,7 @@ The Edge Function expects Supabase Edge Function secrets:
 - WA_TEMPLATE_PAYMENT_CONFIRMATION
 - WA_TEMPLATE_OUTSTANDING_REMINDER
 - WHATSAPP_VERIFY_TOKEN (for webhook verification)
+- META_APP_SECRET (for Meta X-Hub-Signature-256 webhook validation)
 
 Never put the WhatsApp access token, phone-number credentials, service-role key, or Supabase secret key in frontend JavaScript or a public repository.
 
