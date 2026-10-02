@@ -1,9 +1,14 @@
-name: Validate CleanEazy Software
+name: Validate CleanEazy site and app
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -12,20 +17,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate application JavaScript syntax
+      - name: Check application scripts
         run: |
-          node - <<'NODE'
-          const fs = require('fs');
-          const html = fs.readFileSync('software/index.html','utf8');
-          const scripts = [...html.matchAll(/<script(?:[^>]*)>([\s\S]*?)<\/script>/gi)]
-            .map(m => m[1])
-            .filter(s => s.includes("supabase.createClient"));
-          if (scripts.length !== 1) throw new Error("Expected exactly one inline application script");
-          fs.writeFileSync('/tmp/app.js', scripts[0]);
-          NODE
-          node --check /tmp/app.js
-      - name: Verify PWA files
+          node --check script.js
+          node --check software/app.js
+          node --check software/sw.js
+      - name: Check app and SEO assets
         run: |
+          test -f index.html
+          test -f software/index.html
+          test -f software/manifest.json
           test -f software/manifest.webmanifest
           test -f software/sw.js
+          test -f software/offline.html
           test -f software/icon.svg
+          test -f robots.txt
+          test -f sitemap.xml
+          node -e "JSON.parse(require('fs').readFileSync('software/manifest.json','utf8')); JSON.parse(require('fs').readFileSync('software/manifest.webmanifest','utf8'))"
+      - name: Ensure management path stays private to search engines
+        run: |
+          grep -qi 'noindex,nofollow' software/index.html
+          grep -qi 'Disallow: /cleaneazy-laundry/software/' robots.txt
+          test ! -e manager
+          test ! -e admin.html
+

@@ -1,67 +1,60 @@
-# CleanEazy Laundry Production Deployment
+# CleanEazy production setup
 
-## Web app
-The production web app is in `software/index.html` with `manifest.webmanifest`, `sw.js`, and `icon.svg`.
-It is responsive and is designed for Android Chrome, iPhone Safari, desktop Chrome/Edge, and PWA installation.
+## GitHub Pages
 
-For GitHub Pages, publish the repository root from the `main` branch. The application path is:
-`/software/`
+Repository: <https://github.com/sangrammahamuni614-hub/cleaneazy-laundry>
 
-Canonical production URL:
-`https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/`
+The live Pages configuration publishes the `main` branch from the repository root. The canonical URLs are:
 
-Custom domain is intentionally not used. The `CNAME` file has been removed from the repository and the GitHub Pages custom domain has been removed. Do not point `cleaneazy.in` to this application unless a custom domain is intentionally re-enabled later.
+- Public site: <https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/>
+- Management app: <https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/>
+
+No custom domain is used. Do not add a `CNAME` file or publish a second management route.
 
 ## Supabase
-Project ref: `jcckvihjumqdmkcbaebo`
-Project URL: https://jcckvihjumqdmkcbaebo.supabase.co
 
-The database and RPCs are already deployed. Frontend uses only the Supabase publishable key. Service-role/secret keys are server-side only.
+- Project ref: `jcckvihjumqdmkcbaebo`
+- Project URL: <https://jcckvihjumqdmkcbaebo.supabase.co>
+- Frontend uses the publishable key only.
+- Auth sign-up is invitation-only. The first existing Auth user is the initial administrator; use the sign-in page's password reset if needed.
+- Configure the GitHub Pages `/software/` URL in Supabase Auth's allowed redirect URLs so invitation and password-reset links return to the app.
 
-## Meta WhatsApp Cloud API
-Required Supabase Edge Function secrets:
-- WHATSAPP_PHONE_NUMBER_ID
-- WHATSAPP_ACCESS_TOKEN
-- WHATSAPP_API_VERSION (optional)
-- WHATSAPP_VERIFY_TOKEN
-- One approved template system name per event:
-  WA_TEMPLATE_ORDER_RECEIVED
-  WA_TEMPLATE_PICKUP_ASSIGNED
-  WA_TEMPLATE_PICKED_UP
-  WA_TEMPLATE_PROCESSING
-  WA_TEMPLATE_WASHING_STARTED
-  WA_TEMPLATE_IRONING
-  WA_TEMPLATE_QUALITY_CHECK
-  WA_TEMPLATE_READY
-  WA_TEMPLATE_OUT_FOR_DELIVERY
-  WA_TEMPLATE_DELIVERED
-  WA_TEMPLATE_PAYMENT_CONFIRMATION
-  WA_TEMPLATE_OUTSTANDING_REMINDER
+`manage-staff` uses the Supabase server-side service key internally and is deployed with JWT verification enabled. Never add that key to repository files.
 
-The current Edge Function never uses WhatsApp Web, SendKeys, AppActivate, or browser focus automation.
+## WhatsApp Cloud API
 
-Meta template body can use these seven variables:
-Hello {{1}} 👋
-Your CleanEazy Laundry order {{2}} has an update: {{3}}.
-Total: ₹{{4}}
-Paid: ₹{{5}}
-Balance: ₹{{6}}
-{{7}}
-Thank you for choosing CleanEazy Laundry.
+The send worker and webhook are deployed, but message delivery remains disabled until Meta credentials and approved templates are set in Supabase Edge Function secrets:
 
-{{7}} is "Expected delivery: <date>" for order/status messages and "Payment: ₹<amount>" for payment confirmation.
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_API_VERSION` (optional; defaults to `v23.0`)
+- `WHATSAPP_VERIFY_TOKEN`
+- `META_APP_SECRET`
+- `WA_TEMPLATE_ORDER_RECEIVED`
+- `WA_TEMPLATE_PICKUP_ASSIGNED`
+- `WA_TEMPLATE_PICKED_UP`
+- `WA_TEMPLATE_PROCESSING`
+- `WA_TEMPLATE_WASHING_STARTED`
+- `WA_TEMPLATE_IRONING`
+- `WA_TEMPLATE_QUALITY_CHECK`
+- `WA_TEMPLATE_READY`
+- `WA_TEMPLATE_OUT_FOR_DELIVERY`
+- `WA_TEMPLATE_DELIVERED`
+- `WA_TEMPLATE_PAYMENT_CONFIRMATION`
+- `WA_TEMPLATE_OUTSTANDING_REMINDER`
 
-## Webhook
-Configure Meta webhook URL:
-https://jcckvihjumqdmkcbaebo.supabase.co/functions/v1/whatsapp-webhook
-Verify token: same value as `WHATSAPP_VERIFY_TOKEN`
+Webhook URL: `https://jcckvihjumqdmkcbaebo.supabase.co/functions/v1/whatsapp-webhook`. The existing hourly Supabase Cron job queues due subscription-expiry and manual reminders, then calls the send worker using its Vault-backed secret.
 
-Subscribe to the message status events needed by the WhatsApp Cloud API integration. The webhook updates queued message rows with sent/delivered/read/failed state.
+No WhatsApp Web, browser automation, or client-side Meta secrets are used.
 
-## Scheduler
-Supabase Cron job: `cleaneazy-reminders-hourly`
-Schedule: `5 * * * *`
-The live job calls `queue_due_reminders()` and invokes `send-whatsapp` through `pg_net`. The internal cron secret is generated and stored in Supabase Vault and is passed to the worker in the `x-cron-secret` header, not in the URL.
+## Public booking contact
 
-## Security
-Do not commit Meta access tokens, phone-number credentials, Supabase service-role keys, or other secrets into this public repository.
+The public booking CTA is ready to open WhatsApp once the public business number is confirmed. Set `whatsappNumber` in `assets/site-config.js` to country-code digits (for India, `91` followed by the number). The value already stored in Supabase looks like a placeholder, so it was not published. No confirmed public business email is configured.
+
+## Remaining owner setup
+
+1. Confirm the public phone and WhatsApp number, and the public business email if one should appear on the site.
+2. Configure Meta WhatsApp Cloud API credentials and approve the templates listed in `supabase/README.md`.
+3. Enable Supabase Auth leaked-password protection in the project's Auth password settings.
+4. Sign in to the deployed `/software/` page with the administrator's existing credentials and invite any staff accounts.
+

@@ -1,18 +1,16 @@
 {
+  "id": "./",
   "name": "CleanEazy Laundry Manager",
   "short_name": "CleanEazy",
-  "description": "Cloud laundry management system for CleanEazy Laundry.",
+  "description": "Private cloud laundry management for the CleanEazy team.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f7fb",
-  "theme_color": "#18245d",
+  "orientation": "portrait-primary",
+  "theme_color": "#153d3b",
+  "background_color": "#f5f7f2",
   "icons": [
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
+
