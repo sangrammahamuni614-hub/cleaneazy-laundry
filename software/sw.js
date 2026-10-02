@@ -1,6 +1,6 @@
 'use strict';
 const CACHE_PREFIX = 'cleaneazy-software-';
-const CACHE_NAME = CACHE_PREFIX + 'shell-v1';
+const CACHE_NAME = CACHE_PREFIX + 'shell-v2';
 const APP_BASE = new URL('./', self.location.href).pathname;
 const SHELL = [
   './', './app.css', './app.js', './supabase-config.js',
