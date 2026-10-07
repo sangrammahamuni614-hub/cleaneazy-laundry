@@ -41,6 +41,6 @@ jobs:
           grep -qi 'lang="mr-IN"' software/index.html
           grep -qi 'noindex,nofollow' software/index.html
           grep -qi 'Disallow: /cleaneazy-laundry/software/' robots.txt
-          grep -q 'welcome_discount' supabase/migrations/20261006000300_first_order_welcome_offer.sql
+          grep -q 'welcome_discount' supabase/migrations/20261007055219_first_order_welcome_offer.sql
           test ! -e manager
           test ! -e admin.html
