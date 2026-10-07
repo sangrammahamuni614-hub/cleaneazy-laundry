@@ -10,3 +10,11 @@ nav?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => 
   menuButton?.setAttribute('aria-expanded', 'false');
 }));
 document.querySelector('#year').textContent = new Date().getFullYear().toLocaleString('mr-IN');
+
+const whatsappNumber = window.CLEANEAZY_SITE?.whatsappNumber || '';
+const whatsappLink = document.querySelector('#whatsapp-contact');
+if (/^91\d{10}$/.test(whatsappNumber) && whatsappLink) {
+  whatsappLink.href = `https://wa.me/${whatsappNumber}`;
+  whatsappLink.textContent = `WhatsApp वर चौकशी करा · +91 ${whatsappNumber.slice(2, 7)} ${whatsappNumber.slice(7)}`;
+  whatsappLink.hidden = false;
+}
