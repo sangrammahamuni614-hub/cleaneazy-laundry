@@ -17,4 +17,5 @@ if (/^91\d{10}$/.test(whatsappNumber) && whatsappLink) {
   whatsappLink.href = `https://wa.me/${whatsappNumber}`;
   whatsappLink.textContent = `WhatsApp वर चौकशी करा · +91 ${whatsappNumber.slice(2, 7)} ${whatsappNumber.slice(7)}`;
   whatsappLink.hidden = false;
+  whatsappLink.style.display = 'inline-flex';
 }
