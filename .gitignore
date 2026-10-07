@@ -6,5 +6,7 @@ supabase/functions/.env
 supabase/.temp/
 work/.cleaneazy-server.json
 node_modules/
+work/
+outputs/
 .DS_Store
 Thumbs.db
