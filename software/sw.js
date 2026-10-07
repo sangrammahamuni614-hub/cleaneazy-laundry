@@ -1,5 +1,5 @@
-const CACHE = 'cleaneazy-software-v1';
-const APP_SHELL = ['./', './index.html', './offline.html', './styles.css', './app.js', './runtime-config.js', './icon.svg', './manifest.webmanifest'];
+const CACHE = 'cleaneazy-software-v2';
+const APP_SHELL = ['./', './index.html', './offline.html', './styles.css', './app.js', './runtime-config.js', './reset-password.html', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
@@ -13,9 +13,9 @@ self.addEventListener('fetch', event => {
   if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/') || url.pathname.includes('/functions/v1/')) return;
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then(response => {
-      if (response.ok) caches.open(CACHE).then(cache => cache.put('./index.html', response.clone()));
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(request, response.clone()));
       return response;
-    }).catch(() => caches.match('./index.html')));
+    }).catch(async () => (await caches.match(request)) || caches.match('./index.html')));
     return;
   }
   event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
