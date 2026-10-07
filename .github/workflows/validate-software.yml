@@ -17,12 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check application scripts
+      - name: Check JavaScript syntax
         run: |
-          node --check script.js
+          node --check assets/site.js
           node --check software/app.js
           node --check software/sw.js
-      - name: Check app and SEO assets
+          node --check tools/local-server.cjs
+          node --check tools/stop-server.cjs
+      - name: Check required pages and PWA files
         run: |
           test -f index.html
           test -f software/index.html
@@ -34,10 +36,11 @@ jobs:
           test -f robots.txt
           test -f sitemap.xml
           node -e "JSON.parse(require('fs').readFileSync('software/manifest.json','utf8')); JSON.parse(require('fs').readFileSync('software/manifest.webmanifest','utf8'))"
-      - name: Ensure management path stays private to search engines
+      - name: Check Marathi UI and private management route
         run: |
+          grep -qi 'lang="mr-IN"' software/index.html
           grep -qi 'noindex,nofollow' software/index.html
           grep -qi 'Disallow: /cleaneazy-laundry/software/' robots.txt
+          grep -q 'welcome_discount' supabase/migrations/20261006000300_first_order_welcome_offer.sql
           test ! -e manager
           test ! -e admin.html
-

@@ -1,501 +1,378 @@
-(function () {
+(() => {
   'use strict';
-  var STATUS = ['Pickup Requested','Pickup Assigned','Picked Up','Processing','Washing','Ironing','Quality Check','Ready','Out for Delivery','Delivered'];
-  var PLANS = [
-    {name:'Student/Bachelor Basic',registration:1000,monthly:599,kg:5,weekly:true},
-    {name:'Student/Bachelor Premium',registration:1499,monthly:1199,kg:10,weekly:true},
-    {name:'Dosti Yari',registration:3000,monthly:1999,kg:50,weekly:false},
-    {name:'Basic Family',registration:1500,monthly:799,kg:7,weekly:true},
-    {name:'Family Economy',registration:2100,monthly:1199,kg:10,weekly:true}
+  const CONFIG = window.CLEANEAZY_CONFIG || { supabaseUrl: '', supabaseAnonKey: '', demoMode: true };
+  const hasCloud = Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
+  const KEYS = { data: 'cleaneazy.demo.data.v1', session: 'cleaneazy.auth.session.v1' };
+  const STATUSES = ['pickup_requested','pickup_assigned','picked_up','processing','washing','ironing','quality_check','ready','out_for_delivery','delivered'];
+  const STATUS = {pickup_requested:'पिकअप विनंती',pickup_assigned:'पिकअप नियुक्त',picked_up:'कपडे घेतले',processing:'प्रोसेसिंग',washing:'धुलाई',ironing:'इस्त्री',quality_check:'गुणवत्ता तपासणी',ready:'तयार',out_for_delivery:'डिलिव्हरीसाठी बाहेर',delivered:'डिलिव्हर झाले'};
+  const METHOD = {cash:'रोख',upi:'UPI',card:'कार्ड',bank_transfer:'बँक ट्रान्सफर',other:'इतर'};
+  const PAYMENT_STATE = {unpaid:'बाकी',partial:'अंशतः भरले',paid:'पूर्ण भरले'};
+  const PAGE_NAMES = {dashboard:'डॅशबोर्ड',orders:'ऑर्डर्स',customers:'ग्राहक',services:'सेवा आणि दर',payments:'पेमेंट्स',subscriptions:'सदस्य योजना',reports:'अहवाल',whatsapp:'WhatsApp संदेश',backup:'बॅकअप आणि सेटिंग्ज'};
+  const PLANS = [
+    {code:'bachelor_basic',dbName:'Student / Bachelor Basic',name:'विद्यार्थी / बॅचलर बेसिक',amount:599,limit:5,period:'week',periodName:'आठवडा'},
+    {code:'bachelor_premium',dbName:'Student / Bachelor Premium',name:'विद्यार्थी / बॅचलर प्रीमियम',amount:1199,limit:10,period:'week',periodName:'आठवडा'},
+    {code:'dosti_yari',dbName:'Dosti Yari',name:'दोस्ती यारी',amount:1999,limit:50,period:'month',periodName:'महिना'},
+    {code:'family_basic',dbName:'Basic Family',name:'बेसिक फॅमिली',amount:799,limit:7,period:'week',periodName:'आठवडा'},
+    {code:'family_economy',dbName:'Family Economy',name:'फॅमिली इकॉनॉमी',amount:1199,limit:10,period:'week',periodName:'आठवडा'}
   ];
-  var TABLES = ['customers','services','orders','order_items','payments','subscriptions','reminders','whatsapp_messages','service_rate_history','business_settings'];
-  var PAGE_SIZE = 25;
-  var client = null;
-  var user = null;
-  var staff = null;
-  var currentView = 'dashboard';
-  var pages = {orders:0,customers:0,payments:0};
-  var lastOrders = [];
-  var lastCustomers = [];
-  var lastSubscriptions = [];
-  var lastServices = [];
-  var lastSettings = null;
-  var toastTimer = null;
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const id = () => globalThis.crypto?.randomUUID?.() || `ce-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const dateInput = date => new Date(date).toISOString().slice(0, 10);
+  const today = () => dateInput(new Date());
+  const addDays = (date, amount) => { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + amount); return dateInput(d); };
+  const money = value => new Intl.NumberFormat('mr-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(value)||0);
+  const num = value => new Intl.NumberFormat('mr-IN',{maximumFractionDigits:2}).format(Number(value)||0);
+  const dateFmt = value => value ? new Intl.DateTimeFormat('mr-IN',{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${String(value).slice(0,10)}T12:00:00`)) : '—';
+  const shortDate = value => value ? new Intl.DateTimeFormat('mr-IN',{day:'numeric',month:'short'}).format(new Date(`${String(value).slice(0,10)}T12:00:00`)) : '—';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const normalizePhone = value => { let digits = String(value||'').replace(/\D/g,''); if (digits.length === 10) digits = `91${digits}`; return digits; };
+  const displayPhone = value => {if(!value)return '—';const digits=String(value).replace(/\D/g,'');return digits.length===10?`+91 ${esc(digits)}`:digits.startsWith('91')&&digits.length===12?`+91 ${esc(digits.slice(2))}`:`+${esc(digits)}`;};
+  const serviceRateLabel = service => `${money(service.rate)} / ${service.unit === 'kg' ? 'किलो' : 'वस्तू'}`;
+  const currentWeekStart = () => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()+6)%7)); return dateInput(d); };
+  const currentMonthStart = () => `${today().slice(0,7)}-01`;
+  let isDemo = true, data, currentPage = 'dashboard', session = null, toastTimer, deferredInstall = null;
+  const page = $('#page-content');
+  const modal = $('#app-modal');
 
-  function $(selector, root) { return (root || document).querySelector(selector); }
-  function $$(selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
-  function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
-  function money(value) { return '₹' + Number(value || 0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function compactMoney(value) { return '₹' + Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:0}); }
-  function indiaDate(date) { return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(date || new Date()); }
-  function displayDate(value, options) { if (!value) return '—'; var d = new Date(value); if (Number.isNaN(d.getTime())) return esc(value); return new Intl.DateTimeFormat('en-IN',options || {day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}).format(d); }
-  function displayDateTime(value) { return value ? new Intl.DateTimeFormat('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:'Asia/Kolkata'}).format(new Date(value)) : '—'; }
-  function timeBounds(date) { return {from:date+'T00:00:00+05:30',to:date+'T23:59:59.999+05:30'}; }
-  function normalizePhone(value) { var d = String(value || '').replace(/\D/g,''); if (d.indexOf('0091') === 0) d = d.slice(4); if (d.indexOf('91') === 0 && d.length === 12) d = d.slice(2); if (d.indexOf('0') === 0 && d.length === 11) d = d.slice(1); if (d.length > 10) d = d.slice(-10); return d; }
-  function statusClass(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
-  function paymentClass(value) { return String(value || 'Pending').toLowerCase(); }
-  function setBusy(button, busy, label) { if (!button) return; button.disabled = !!busy; if (busy) { button.dataset.oldText = button.innerHTML; button.innerHTML = '<span class="spinner"></span> ' + esc(label || 'Working…'); } else if (button.dataset.oldText) { button.innerHTML = button.dataset.oldText; delete button.dataset.oldText; } }
-  function toast(message, type) { var region=$('#toast-region'); if(!region)return; var node=document.createElement('div'); node.className='toast '+(type||''); node.textContent=message; region.appendChild(node); window.setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},4700); }
-  function fail(error, context) { var message=error && error.message ? error.message : String(error || 'Unknown error'); console.error(context || 'CleanEazy application error:', error); toast((context ? context + ': ' : '') + message,'error'); }
-  function empty(title, detail) { return '<div class="empty-state"><strong>'+esc(title)+'</strong>'+esc(detail || '')+'</div>'; }
-  function pill(status, payment) { return '<span class="'+(payment?'payment-pill ':'status-pill ')+(payment?paymentClass(status):statusClass(status))+'">'+esc(status || 'Pending')+'</span>'; }
-  function initials(name) { var p=String(name||'C').trim().split(/\s+/); return ((p[0]||'C').charAt(0)+(p.length>1?p[p.length-1].charAt(0):'')).toUpperCase(); }
-  function currentDisplayName() { return (staff && staff.display_name) || (user && user.email ? user.email.split('@')[0] : 'CleanEazy team'); }
-  function showOnly(id) { ['auth-shell','blocked-shell','app-frame'].forEach(function (name) { var node=document.getElementById(name); node.hidden=name!==id; }); }
-  function setAuthMessage(message) { var node=$('#login-error'); if(node)node.textContent=message||''; }
-  function loadFailNotice(message) { setAuthMessage(message); showOnly('auth-shell'); }
-  function openDialog(title, body, actions) {
-    var dialog=$('#app-dialog'); var inner=$('#dialog-inner');
-    inner.innerHTML='<div class="dialog-head"><h2>'+esc(title)+'</h2><button type="button" class="dialog-close" data-close aria-label="Close">×</button></div><div class="dialog-body">'+body+'</div>'+(actions || '');
-    if (!dialog.open) dialog.showModal();
-    var focus=$('input,select,textarea,button',inner); if(focus)window.setTimeout(function(){focus.focus();},30);
+  function freshDemo() {
+    const day = today();
+    const customers = [
+      {id:'cust-01',code:'ग्राहक-००१',fullName:'अनन्या देशमुख',whatsapp:'919876540001',altNumber:'',address:'कोथरूड',area:'कोथरूड',customerType:'नियमित',notes:'पिकअपसाठी संध्याकाळी वेळ योग्य',active:true,createdAt:addDays(day,-60)},
+      {id:'cust-02',code:'ग्राहक-००२',fullName:'रोहन कुलकर्णी',whatsapp:'919876540002',altNumber:'',address:'विमान नगर',area:'विमान नगर',customerType:'नियमित',notes:'',active:true,createdAt:addDays(day,-32)},
+      {id:'cust-03',code:'ग्राहक-००३',fullName:'मीरा पाटील',whatsapp:'919876540003',altNumber:'',address:'बाणेर',area:'बाणेर',customerType:'सब्स्क्रिप्शन',notes:'',active:true,createdAt:addDays(day,-18)},
+      {id:'cust-04',code:'ग्राहक-००४',fullName:'सिद्धार्थ जोशी',whatsapp:'919876540004',altNumber:'',address:'पाषाण',area:'पाषाण',customerType:'नियमित',notes:'',active:true,createdAt:addDays(day,-10)}
+    ];
+    const services = [
+      {id:'srv-01',name:'धुलाई',unit:'kg',rate:80,category:'धुलाई',description:'साध्या कपड्यांची धुलाई',active:true},
+      {id:'srv-02',name:'धुलाई + इस्त्री',unit:'kg',rate:110,category:'धुलाई',description:'धुलाई आणि इस्त्री',active:true},
+      {id:'srv-03',name:'शर्ट / पँट',unit:'piece',rate:40,category:'कपडे',description:'प्रति वस्तू सेवा',active:true},
+      {id:'srv-04',name:'ब्लँकेट',unit:'kg',rate:80,category:'घरगुती वस्तू',description:'ब्लँकेट धुलाई',active:true},
+      {id:'srv-05',name:'बॅग / शूज',unit:'piece',rate:110,category:'विशेष निगा',description:'प्रति वस्तू स्वच्छता',active:true},
+      {id:'srv-06',name:'ड्रायक्लीन साडी',unit:'piece',rate:160,category:'ड्रायक्लीनिंग',description:'विशेष निगेसह ड्रायक्लीनिंग',active:true},
+      {id:'srv-07',name:'इतर कपडे',unit:'piece',rate:50,category:'कपडे',description:'प्रति वस्तू सेवा',active:true}
+    ];
+    const order = (n,cust,status,dayOffset,total,paid,service,qty,unit,rate,discount=0) => ({id:`ord-${n}`,number:`CE-२०२६-${String(n).padStart(4,'0')}`,invoice:`INV-२०२६-${String(n).padStart(4,'0')}`,customerId:cust,placedAt:addDays(day,dayOffset),deliveryAt:addDays(day,Math.max(dayOffset,0)+2),status,subtotal:total+discount,discount,total,paid,outstanding:total-paid,paymentStatus:paid<=0?'unpaid':paid>=total?'paid':'partial',notes:'',items:[{serviceId:service,name:services.find(s=>s.id===service).name,item:'कपडे',qty,unit,rate,amount:total+discount}]});
+    const orders = [order(128,'cust-01','processing',0,704,300,'srv-02',6.4,'kg',110),order(127,'cust-02','ready',-1,320,320,'srv-06',2,'piece',160),order(126,'cust-03','out_for_delivery',0,800,0,'srv-01',10,'kg',80),order(125,'cust-04','delivered',-3,320,320,'srv-04',4,'kg',80),order(124,'cust-01','washing',-2,400,0,'srv-03',10,'piece',40),order(123,'cust-02','pickup_requested',-1,440,0,'srv-02',4,'kg',110)];
+    const payments=[{id:'pay-01',orderId:'ord-128',amount:300,method:'upi',receivedAt:new Date().toISOString(),reference:'नमुना-००१'},{id:'pay-02',orderId:'ord-127',amount:320,method:'cash',receivedAt:new Date(Date.now()-86400000).toISOString(),reference:'नमुना-००२'},{id:'pay-03',orderId:'ord-125',amount:320,method:'card',receivedAt:new Date(Date.now()-3*86400000).toISOString(),reference:'नमुना-००३'}];
+    const subscriptions=[{id:'sub-01',customerId:'cust-03',planCode:'bachelor_premium',startDate:addDays(day,-12),expiryDate:addDays(day,18),limit:10,period:'week',usedKg:10,monthlyAmount:1199,active:true}];
+    return {customers,services,orders,payments,subscriptions,messages:[{id:'msg-01',event:'ऑर्डर तयार',recipient:'919876540001',status:'queued',attempts:0,createdAt:new Date().toISOString(),providerId:'',error:''}],settings:{businessName:'CleanEazy Laundry',location:'पुणे, महाराष्ट्र',currency:'INR'},rateHistory:[]};
   }
-  function closeDialog() { var d=$('#app-dialog'); if(d && d.open)d.close(); }
-  function safeError(error, form) { var node=form && $('.form-error',form); if(node)node.textContent=error && error.message ? error.message : String(error || 'Something went wrong.'); else fail(error); }
-
-  function start() {
-    if (!window.CLEANEAZY_SUPABASE || !window.supabase || !window.supabase.createClient) {
-      loadFailNotice('The secure sign-in library could not load. Check your internet connection and reload this page.'); return;
-    }
-    client=window.supabase.createClient(window.CLEANEAZY_SUPABASE.url,window.CLEANEAZY_SUPABASE.publishableKey);
-    bindStaticEvents();
-    client.auth.onAuthStateChange(function (event, session) {
-      if (event === 'SIGNED_OUT') { user=null; staff=null; showOnly('auth-shell'); setAuthMessage(''); return; }
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        window.setTimeout(function(){if(session)activateSession(session);else {user=null;staff=null;showOnly('auth-shell');}},0);
-      }
-    });
-    client.auth.getSession().then(function (response) {
-      if(response.error){loadFailNotice('We could not read your saved sign-in. Please sign in again.');return;}
-      if(response.data && response.data.session)activateSession(response.data.session);else showOnly('auth-shell');
-    }).catch(function(error){loadFailNotice('We could not connect to your business sign-in. '+(error.message||''));});
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(error){console.warn('Offline app install is unavailable:',error.message);});
+  function loadDemo() {
+    try { const saved=JSON.parse(localStorage.getItem(KEYS.data)||'null'); if(saved && Array.isArray(saved.customers) && Array.isArray(saved.orders)) return saved; } catch(_) {}
+    const starter=freshDemo(); localStorage.setItem(KEYS.data,JSON.stringify(starter)); return starter;
   }
-
-  async function activateSession(session) {
-    if (!client || !session || !session.user) return;
-    user=session.user;
-    showOnly('blocked-shell');
-    $('#blocked-message').textContent='Checking your CleanEazy team access…';
-    try {
-      var response=await client.from('staff_users').select('user_id,display_name,role,active').eq('user_id',user.id).maybeSingle();
-      if (response.error) throw response.error;
-      staff=response.data;
-      if (!staff || !staff.active) { $('#blocked-message').textContent='You’re signed in, but this account is not active on the CleanEazy team. Ask an administrator to invite or reactivate it.';return; }
-      $('#profile-name').textContent=currentDisplayName(); $('#profile-role').textContent=staff.role; $('#profile-avatar').textContent=initials(currentDisplayName()); $('#greeting-name').textContent=(currentDisplayName().split(/\s+/)[0]||'team');
-      $$('.admin-only').forEach(function(node){node.hidden=staff.role!=='admin';});
-      showOnly('app-frame');
-      await loadDashboard();
-      await updatePendingBadge();
-    } catch(error) { staff=null; $('#blocked-message').textContent='Your business access could not be verified. Please ask the CleanEazy administrator to check your team account.'; console.error('Access check failed:',error); }
+  function persist() { if(isDemo) localStorage.setItem(KEYS.data,JSON.stringify(data)); }
+  function toast(message, type='success') {
+    const el=document.createElement('div'); el.className=`toast ${type==='error'?'error':type==='info'?'info':''}`; el.textContent=message; $('#toast-region').append(el);
+    setTimeout(()=>el.remove(),4000);
   }
-
-  function bindStaticEvents() {
-    $('#login-form').addEventListener('submit',login);
-    $('#toggle-password').addEventListener('click',function(){var input=$('#login-password');var reveal=input.type==='password';input.type=reveal?'text':'password';this.textContent=reveal?'Hide':'Show';this.setAttribute('aria-label',reveal?'Hide password':'Show password');});
-    $('#forgot-password').addEventListener('click',forgotPassword);
-    $('#blocked-logout').addEventListener('click',logout);
-    $('#logout-button').addEventListener('click',logout);
-    $('#mobile-nav-toggle').addEventListener('click',function(){var aside=$('#sidebar');var open=!aside.classList.contains('is-open');aside.classList.toggle('is-open',open);this.setAttribute('aria-expanded',String(open));});
-    $$('.nav-item').forEach(function(item){item.addEventListener('click',function(){goView(item.dataset.view);$('#sidebar').classList.remove('is-open');$('#mobile-nav-toggle').setAttribute('aria-expanded','false');});});
-    $('#view-container').addEventListener('click',delegatedClick);
-    $('#view-container').addEventListener('change',function(event){var role=event.target.closest('select[data-team-update="role"]');if(role)updateTeamMember(role.dataset.userId,'role').catch(function(error){fail(error,'Team access could not be updated');});});
-    $('#dialog-inner').addEventListener('click',dialogClick);
-    $('#dialog-inner').addEventListener('input',dialogInput);
-    $('#dialog-inner').addEventListener('change',dialogInput);
-    $('#dialog-inner').addEventListener('submit',dialogSubmit);
-    $('#app-dialog').addEventListener('click',function(event){if(event.target===this)closeDialog();});
-    $$('.refresh-button').forEach(function(button){button.addEventListener('click',function(){loadView(currentView);});});
-    $('#orders-search').addEventListener('input',debounce(function(){pages.orders=0;loadOrders();},220));
-    $('#order-status-filter').addEventListener('change',function(){pages.orders=0;loadOrders();});
-    $('#customers-search').addEventListener('input',debounce(function(){pages.customers=0;loadCustomers();},220));
-    $('#customer-status-filter').addEventListener('change',function(){pages.customers=0;loadCustomers();});
-    $('#payments-search').addEventListener('input',debounce(function(){pages.payments=0;loadPayments();},220));
-    $('#payment-date-filter').addEventListener('change',function(){pages.payments=0;loadPayments();});
-    $('#subscriptions-search').addEventListener('input',debounce(loadSubscriptions,220));
-    $('#subscription-status-filter').addEventListener('change',loadSubscriptions);
-    $('#message-status-filter').addEventListener('change',loadMessages);
-    $('#reminder-status-filter').addEventListener('change',loadReminders);
-    $('#report-month').value=indiaDate(new Date()).slice(0,7);
-    $('#report-month').addEventListener('change',loadReports);
-    $('#process-messages').addEventListener('click',processMessages);
-    $('#create-backup').addEventListener('click',createBackup);
-    $('#restore-file').addEventListener('change',restoreBackup);
-    $('#export-outstanding').addEventListener('click',exportOutstanding);
-    $('#invite-form').addEventListener('submit',inviteStaff);
-    $('#save-settings').addEventListener('click',saveSettings);
-    document.addEventListener('keydown',function(event){if(event.key==='Escape')$('#sidebar').classList.remove('is-open');});
+  function showLoginError(message) {
+    let node=$('#login-error'); if(!node){node=document.createElement('div');node.id='login-error';node.className='form-error';$('#login-form').prepend(node);} node.textContent=message;
   }
-
-  async function login(event) {
-    event.preventDefault(); setAuthMessage('');
-    var button=$('#login-submit');setBusy(button,true,'Signing in…');
-    try {
-      var result=await client.auth.signInWithPassword({email:$('#login-email').value.trim(),password:$('#login-password').value});
-      if(result.error)throw result.error;
-      $('#login-password').value='';
-      await activateSession(result.data.session);
-    } catch(error) { setAuthMessage(error.message || 'We could not sign you in. Check your email and password.'); }
-    finally { setBusy(button,false); }
+  function openModal(title, body, kicker='माहिती') {
+    $('#modal-title').textContent=title; $('#modal-kicker').textContent=kicker; $('#modal-body').innerHTML=body;
+    if(!modal.open) modal.showModal();
   }
-  async function forgotPassword() {
-    var email=$('#login-email').value.trim(); if(!email){setAuthMessage('Enter your email address first, then choose Forgot password.');$('#login-email').focus();return;}
-    try { var result=await client.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});if(result.error)throw result.error;setAuthMessage('If this team account exists, password reset instructions will arrive by email.'); }
-    catch(error){setAuthMessage(error.message||'Password reset could not be requested right now.');}
+  function closeModal() { if(modal.open) modal.close(); }
+  function setPage(next) {
+    if(!PAGE_NAMES[next]) return; currentPage=next;
+    $$('.side-nav [data-page]').forEach(button=>button.classList.toggle('active',button.dataset.page===next));
+    $('#page-crumb').textContent=PAGE_NAMES[next];
+    $('#sidebar').classList.remove('open'); $('#mobile-overlay').classList.remove('open');
+    render(); window.scrollTo({top:0,behavior:'smooth'});
   }
-  async function logout() { if(client)await client.auth.signOut(); user=null;staff=null;showOnly('auth-shell'); }
-  function debounce(fn,wait){var timer;return function(){var args=arguments,context=this;window.clearTimeout(timer);timer=window.setTimeout(function(){fn.apply(context,args);},wait);};}
-  function goView(name) {
-    if(!name || (['team','settings','reminders'].indexOf(name)>=0 && (!staff || staff.role!=='admin')))return;
-    currentView=name; $$('.view').forEach(function(view){view.classList.toggle('is-current',view.id==='view-'+name);}); $$('.nav-item').forEach(function(item){item.classList.toggle('is-active',item.dataset.view===name);});
-    var node=$('#view-'+name);$('#breadcrumb-current').textContent=node?node.dataset.title:name;
-    loadView(name);
+  function render() {
+    if(!data) return;
+    const renderer={dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,services:renderServices,payments:renderPayments,subscriptions:renderSubscriptions,reports:renderReports,whatsapp:renderWhatsApp,backup:renderBackup}[currentPage];
+    if(renderer) renderer();
+    $('#order-nav-count').textContent=num(data.orders.filter(order=>order.status!=='delivered').length);
   }
-  function loadView(name) {
-    var actions={dashboard:loadDashboard,orders:loadOrders,customers:loadCustomers,services:loadServicesPage,payments:loadPayments,subscriptions:loadSubscriptions,reminders:loadReminders,reports:loadReports,messages:loadMessages,backups:loadBackupHistory,team:loadTeam,settings:loadSettings};
-    if(actions[name])actions[name]().catch(function(error){fail(error,'Could not load '+name);});
+  function customer(idValue) { return data.customers.find(item=>item.id===idValue); }
+  function order(idValue) { return data.orders.find(item=>item.id===idValue); }
+  function orderByNo(value) { return data.orders.find(item=>item.number===value||item.invoice===value); }
+  function relatedPayments(orderId) { return data.payments.filter(payment=>payment.orderId===orderId); }
+  function activeSubscriptions(customerId) { return data.subscriptions.filter(item=>item.active&&item.customerId===customerId&&item.expiryDate>=today()); }
+  function statusPill(status) { return `<span class="status-pill status-${esc(status)}">${STATUS[status]||'अज्ञात'}</span>`; }
+  function paymentPill(status) { return `<span class="payment-pill payment-${esc(status)}">${PAYMENT_STATE[status]||'बाकी'}</span>`; }
+  function pageHeading(title, description, actions='') { return `<div class="page-heading"><div><h1>${title}</h1><p>${description}</p></div><div class="heading-actions">${actions}</div></div>`; }
+  function btn(action,label,kind='primary',extra='') { return `<button type="button" class="${kind}-button" data-action="${esc(action)}" ${extra}>${label}</button>`; }
+  function empty(title,description) { return `<div class="empty-state"><div class="empty-icon">◌</div><strong>${title}</strong>${description}</div>`; }
+  function tableShell(title,tools,content,classes='') { return `<div class="table-card ${classes}"><div class="table-toolbar"><h2>${title}</h2>${tools||''}</div>${content}</div>`; }
+  function orderRows(items) {
+    if(!items.length) return empty('ऑर्डर उपलब्ध नाहीत','ऑर्डर जोडल्यानंतर त्या इथे दिसतील.');
+    return `<div class="table-scroll"><table><thead><tr><th>ऑर्डर</th><th>ग्राहक</th><th>ऑर्डर तारीख</th><th>वितरण तारीख</th><th>स्थिती</th><th>एकूण</th><th>थकबाकी</th></tr></thead><tbody>${items.map(item=>{const c=customer(item.customerId);return `<tr class="clickable-row" data-action="order-detail" data-id="${esc(item.id)}"><td><div class="cell-main">${esc(item.number)}</div><div class="cell-sub">${esc(item.invoice)}</div></td><td><div class="cell-main">${esc(c?.fullName||'ग्राहक उपलब्ध नाही')}</div><div class="cell-sub">${displayPhone(c?.whatsapp)}</div></td><td>${dateFmt(item.placedAt)}</td><td>${dateFmt(item.deliveryAt)}</td><td>${statusPill(item.status)}</td><td class="amount">${money(item.total)}</td><td>${money(item.outstanding)}</td></tr>`}).join('')}</tbody></table></div>`;
   }
-  function delegatedClick(event) {
-    var action=event.target.closest('[data-action]'); if(action){var kind=action.dataset.action;if(kind==='new-order')newOrder(Number(action.dataset.customerId)||undefined);if(kind==='new-customer')editCustomer();if(kind==='new-service')editService();if(kind==='new-subscription')newSubscription();if(kind==='new-reminder')newReminder();return;}
-    var go=event.target.closest('[data-go]');if(go){goView(go.dataset.go);return;}
-    var detail=event.target.closest('[data-order-detail]');if(detail){showOrder(Number(detail.dataset.orderDetail));return;}
-    var customer=event.target.closest('[data-customer-detail]');if(customer){showCustomer(Number(customer.dataset.customerDetail));return;}
-    var svc=event.target.closest('[data-edit-service]');if(svc){var item=lastServices.find(function(x){return x.id===Number(svc.dataset.editService);});if(item)editService(item);return;}
-    var sub=event.target.closest('[data-toggle-subscription]');if(sub){toggleSubscription(Number(sub.dataset.toggleSubscription));return;}
-    var member=event.target.closest('[data-team-update]');if(member){if(member.dataset.teamUpdate==='active')updateTeamMember(member.dataset.userId,'active');return;}
-    var retry=event.target.closest('[data-retry-message]');if(retry){retryMessage(Number(retry.dataset.retryMessage));return;}
-    var cancel=event.target.closest('[data-cancel-reminder]');if(cancel){cancelReminder(Number(cancel.dataset.cancelReminder));return;}
-    var page=event.target.closest('[data-page]');if(page){pages[page.dataset.pageTable]=Number(page.dataset.page);loadView(page.dataset.pageTable);return;}
-    var history=event.target.closest('[data-payment-order]');if(history){showOrder(Number(history.dataset.paymentOrder));return;}
+  function renderDashboard() {
+    const day=today(), todayOrders=data.orders.filter(item=>item.placedAt===day), pending=data.orders.filter(item=>item.status!=='delivered'), countStatus=s=>data.orders.filter(item=>item.status===s).length;
+    const sale=todayOrders.reduce((sum,item)=>sum+Number(item.total),0), collection=data.payments.filter(item=>String(item.receivedAt).slice(0,10)===day).reduce((sum,item)=>sum+Number(item.amount),0), outstanding=data.orders.reduce((sum,item)=>sum+Number(item.outstanding),0), openSubscriptions=data.subscriptions.filter(item=>item.active&&item.expiryDate>=day).length;
+    const cards=[['आजच्या ऑर्डर्स',num(todayOrders.length),'आज नोंदवलेल्या ऑर्डर्स','▤',''],['प्रलंबित ऑर्डर्स',num(pending.length),'डिलिव्हरी बाकी','◷','warm'],['प्रोसेसिंग',num(countStatus('processing')+countStatus('washing')+countStatus('ironing')),'काम सुरू आहे','◌','warm'],['तयार',num(countStatus('ready')),'डिलिव्हरीसाठी तयार','✓',''],['डिलिव्हरीसाठी बाहेर',num(countStatus('out_for_delivery')),'ग्राहकापर्यंत जात आहे','↗',''],['पूर्ण झालेल्या ऑर्डर्स',num(countStatus('delivered')),'डिलिव्हर झालेल्या','✓',''],['आजची विक्री',money(sale),'ऑर्डरच्या एकूण रकमेवर आधारित','₹',''],['आजची वसुली',money(collection),'आज मिळालेले पेमेंट','₹','warm'],['एकूण थकबाकी',money(outstanding),'सर्व ऑर्डर्सची थकबाकी','!','alert'],['सक्रिय सब्स्क्रिप्शन',num(openSubscriptions),'वैध प्लॅन्स','◇','']];
+    const max=Math.max(1,...Array.from({length:7},(_,i)=>data.orders.filter(o=>o.placedAt===addDays(day,i-6)).reduce((s,o)=>s+o.total,0)),...Array.from({length:7},(_,i)=>data.payments.filter(p=>String(p.receivedAt).slice(0,10)===addDays(day,i-6)).reduce((s,p)=>s+p.amount,0)));
+    const chart=`<div class="chart">${Array.from({length:7},(_,i)=>{const date=addDays(day,i-6),sales=data.orders.filter(o=>o.placedAt===date).reduce((s,o)=>s+o.total,0),paid=data.payments.filter(p=>String(p.receivedAt).slice(0,10)===date).reduce((s,p)=>s+p.amount,0);return `<div class="chart-column"><div title="विक्री ${money(sales)} · वसुली ${money(paid)}" class="chart-bar alt" style="height:${Math.max(4,sales/max*92)}%"></div><div title="वसुली ${money(paid)}" class="chart-bar" style="height:${Math.max(paid?4:0,paid/max*92)}%"></div><span class="chart-label">${shortDate(date)}</span></div>`}).join('')}</div>`;
+    const stages=['pickup_requested','processing','washing','ironing','quality_check','ready','out_for_delivery'];
+    const maxStage=Math.max(1,...stages.map(countStatus));
+    page.innerHTML=`${pageHeading('नमस्कार! 👋','आजच्या कामकाजाचा एकत्रित आढावा.',btn('new-order','＋ नवी ऑर्डर'))}<div class="stats-grid">${cards.map(([label,value,meta,icon,cls])=>`<article class="stat-card ${cls}"><span class="stat-icon">${icon}</span><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-meta">${meta}</div></article>`).join('')}</div><div class="dashboard-grid"><section class="panel"><div class="panel-heading"><div><h2>विक्री आणि वसुली</h2><p>मागील सात दिवस · रुपये</p></div><a class="small-link" href="#" data-action="go-page" data-page="reports">सर्व अहवाल →</a></div>${chart}<div class="chart-legend"><span><i class="legend-dot"></i>वसुली</span><span><i class="legend-dot gold"></i>विक्री</span></div></section><section class="panel"><div class="panel-heading"><div><h2>स्थितीनुसार ऑर्डर्स</h2><p>सध्याचे कामकाज</p></div></div><div class="status-list">${stages.map(s=>`<div class="status-line"><span>${STATUS[s]}</span><div class="progress-track"><div class="progress-fill" style="width:${Math.max(2,countStatus(s)/maxStage*100)}%"></div></div><strong>${num(countStatus(s))}</strong></div>`).join('')}</div></section></div>${tableShell('अलीकडील ऑर्डर्स',`<a href="#" class="small-link" data-action="go-page" data-page="orders">सर्व ऑर्डर्स →</a>`,orderRows([...data.orders].sort((a,b)=>b.placedAt.localeCompare(a.placedAt)).slice(0,5)))}<div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>सेवानुसार विक्री</h2><a href="#" class="small-link" data-action="go-page" data-page="reports">अहवाल →</a></div>${serviceSalesMarkup()}</section><section class="panel"><div class="panel-heading"><h2>लवकरच्या डिलिव्हरी</h2></div>${upcomingDeliveries()}</section></div>`;
   }
-  function dialogClick(event) {
-    if(event.target.closest('[data-close]')){closeDialog();return;}
-    if(event.target.closest('[data-add-line]')){addOrderLine();return;}
-    var remove=event.target.closest('[data-remove-line]');if(remove){remove.closest('.line-item').remove();updateOrderPreview();return;}
-    var advance=event.target.closest('[data-advance-order]');if(advance){advanceOrder(Number(advance.dataset.id),advance.dataset.next);return;}
-    var pay=event.target.closest('[data-take-payment]');if(pay){paymentForm(Number(pay.dataset.takePayment));return;}
-    var print=event.target.closest('[data-print-invoice]');if(print){if(print.dataset.printInvoice)loadInvoice(Number(print.dataset.printInvoice)).catch(function(error){fail(error,'Invoice could not be opened');});else window.print();return;}
-    var cust=event.target.closest('[data-customer-edit]');if(cust){var c=lastCustomers.find(function(x){return x.id===Number(cust.dataset.customerEdit);});if(c)editCustomer(c);return;}
-    var inactivate=event.target.closest('[data-customer-toggle]');if(inactivate){toggleCustomer(Number(inactivate.dataset.customerToggle));return;}
-    var showOrderButton=event.target.closest('[data-open-order]');if(showOrderButton){showOrder(Number(showOrderButton.dataset.openOrder));return;}
-    var profileOrder=event.target.closest('[data-action="new-order"][data-customer-id]');if(profileOrder){newOrder(Number(profileOrder.dataset.customerId));return;}
+  function serviceSalesMarkup() {
+    const totals={};data.orders.forEach(o=>(o.items||[]).forEach(i=>{const key=i.name||'सेवा';totals[key]=(totals[key]||0)+Number(i.amount||0)}));const rows=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,4);const max=Math.max(1,...rows.map(x=>x[1]));
+    return rows.length?`<div class="bar-list">${rows.map(([name,value])=>`<div class="bar-row"><span>${esc(name)}</span><div class="progress-track"><div class="progress-fill" style="width:${value/max*100}%"></div></div><strong>${money(value)}</strong></div>`).join('')}</div>`:empty('विक्री उपलब्ध नाही','ऑर्डर नोंदवल्यावर सेवा-निहाय विक्री दिसेल.');
   }
-  function dialogInput(event) { if(event.target.closest('.line-item') || event.target.id==='order-discount')updateOrderPreview(); }
-  function dialogSubmit(event) {
-    var form=event.target;if(form.id==='customer-form'){event.preventDefault();saveCustomer(form);}else if(form.id==='service-form'){event.preventDefault();saveService(form);}else if(form.id==='order-form'){event.preventDefault();saveOrder(form);}else if(form.id==='payment-form'){event.preventDefault();savePayment(form);}else if(form.id==='subscription-form'){event.preventDefault();saveSubscription(form);}else if(form.id==='reminder-form'){event.preventDefault();saveReminder(form);}
+  function upcomingDeliveries() {
+    const list=[...data.orders].filter(o=>o.status!=='delivered').sort((a,b)=>a.deliveryAt.localeCompare(b.deliveryAt)).slice(0,4);
+    return list.length?`<div class="status-list">${list.map(o=>`<div class="status-line" style="grid-template-columns:1fr auto"><span>${esc(customer(o.customerId)?.fullName||'ग्राहक')}<small style="display:block;color:#a0aaa2">${esc(o.number)}</small></span><strong>${dateFmt(o.deliveryAt)}</strong></div>`).join('')}</div>`:empty('डिलिव्हरी बाकी नाही','सर्व ऑर्डर्स पूर्ण आहेत.');
   }
-
-  function metric(label,value,icon,foot,style){return '<article class="metric-card '+(style||'')+'"><div class="metric-top"><span class="metric-label">'+esc(label)+'</span><span class="metric-icon">'+icon+'</span></div><div class="metric-value">'+esc(value)+'</div><div class="metric-foot">'+esc(foot||'')+'</div></article>';}
-  async function countQuery(table,filter){var query=client.from(table).select('*',{count:'exact',head:true});if(filter)query=filter(query);var r=await query;if(r.error)throw r.error;return r.count||0;}
-  async function loadDashboard() {
-    $('#dashboard-metrics').innerHTML='<div class="loading-state">Loading your business figures…</div>';
-    var day=indiaDate(new Date()),bounds=timeBounds(day),weekStart=new Date(Date.now()-6*86400000);var from=indiaDate(weekStart)+'T00:00:00+05:30';
-    var result=await Promise.all([
-      client.from('orders').select('id,order_number,customer_id,order_date,status,total_amount,paid_amount,payment_status,customer:customers(full_name)').order('order_date',{ascending:false}).limit(1000),
-      client.from('payments').select('id,amount,payment_date').gte('payment_date',from).lte('payment_date',bounds.to).order('payment_date',{ascending:false}).limit(1000),
-      client.from('order_items').select('amount,service:services(service_name)').limit(2000),
-      countQuery('customers',function(q){return q.eq('is_active',true);}),
-      countQuery('subscriptions',function(q){return q.eq('active',true).gte('expiry_date',day);})
+  function renderOrders(filter='') {
+    const q=filter.trim().toLowerCase();const list=[...data.orders].sort((a,b)=>b.placedAt.localeCompare(a.placedAt)).filter(o=>{const c=customer(o.customerId);return !q||[o.number,o.invoice,c?.fullName,c?.whatsapp,STATUS[o.status]].some(v=>String(v||'').toLowerCase().includes(q))});
+    const controls=`<div class="toolbar-row"><select id="order-filter" aria-label="स्थितीनुसार ऑर्डर निवडा"><option value="">सर्व स्थिती</option>${STATUSES.map(s=>`<option value="${s}">${STATUS[s]}</option>`).join('')}</select><input id="order-search" placeholder="ऑर्डर शोधा" value="${esc(filter)}" aria-label="ऑर्डर शोधा"></div>`;
+    page.innerHTML=`${pageHeading('ऑर्डर्स','ऑर्डर तयार करा, स्थिती पाहा आणि बिल उघडा.',btn('new-order','＋ नवी ऑर्डर'))}${tableShell(`सर्व ऑर्डर्स · ${num(list.length)}`,controls,orderRows(list),'orders-table')}`;
+  }
+  function renderCustomers(filter='') {
+    const q=filter.trim().toLowerCase();const list=[...data.customers].filter(c=>!q||[c.fullName,c.whatsapp,c.area,c.code].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>a.fullName.localeCompare(b.fullName,'mr'));
+    const tools=`<label class="toolbar-search"><span>⌕</span><input id="customer-search" value="${esc(filter)}" placeholder="नाव, क्रमांक, एरिया" aria-label="ग्राहक शोधा"></label>`;
+    const content=list.length?`<div class="table-scroll"><table><thead><tr><th>ग्राहक</th><th>WhatsApp नंबर</th><th>एरिया</th><th>ग्राहक प्रकार</th><th>ऑर्डर्स</th><th>थकबाकी</th><th>स्थिती</th></tr></thead><tbody>${list.map(c=>{const orders=data.orders.filter(o=>o.customerId===c.id),bal=orders.reduce((s,o)=>s+Number(o.outstanding),0);return `<tr class="clickable-row" data-action="customer-detail" data-id="${esc(c.id)}"><td><div class="customer-cell"><span class="mini-avatar">${esc((c.fullName||'?').slice(0,1))}</span><div><div class="cell-main">${esc(c.fullName)}</div><div class="cell-sub">${esc(c.code)}</div></div></div></td><td>${displayPhone(c.whatsapp)}</td><td>${esc(c.area||'—')}</td><td>${esc(c.customerType||'नियमित')}</td><td>${num(orders.length)}</td><td class="amount">${money(bal)}</td><td>${c.active?'<span class="payment-pill payment-paid">सक्रिय</span>':'<span class="payment-pill payment-unpaid">बंद</span>'}</td></tr>`}).join('')}</tbody></table></div>`:empty('ग्राहक उपलब्ध नाहीत',q?'शोध बदलून पाहा.':'पहिला ग्राहक जोडण्यासाठी “ग्राहक जोडा” निवडा.');
+    page.innerHTML=`${pageHeading('ग्राहक','ग्राहकांची माहिती, ऑर्डर इतिहास आणि थकबाकी.',btn('new-customer','＋ ग्राहक जोडा'))}${tableShell(`एकूण ग्राहक · ${num(list.length)}`,tools,content)}`;
+  }
+  function renderServices() {
+    const list=[...data.services].sort((a,b)=>a.name.localeCompare(b.name,'mr'));
+    page.innerHTML=`${pageHeading('सेवा आणि दर','दर बदलल्यावर जुन्या ऑर्डरमधील दर जसेच्या तसे राहतात.',btn('new-service','＋ सेवा जोडा'))}${list.length?`<div class="service-grid-app">${list.map(s=>`<article class="service-card-app"><div class="service-card-top"><span class="service-symbol">✳</span><button class="icon-action" data-action="edit-service" data-id="${esc(s.id)}" aria-label="${esc(s.name)} संपादित करा">✎</button></div><h3>${esc(s.name)}</h3><p>${esc(s.description||s.category||'सेवा')}</p><div class="service-rate">${money(s.rate)} <small>/ ${s.unit==='kg'?'किलो':'वस्तू'}</small></div><footer><span>${s.active?'सक्रिय सेवा':'बंद सेवा'}</span><button class="small-link" data-action="edit-service" data-id="${esc(s.id)}">दर बदला</button></footer></article>`).join('')}</div>`:empty('सेवा उपलब्ध नाहीत','सेवा जोडल्यानंतर येथे दिसतील.')}`;
+  }
+  function renderPayments() {
+    const list=[...data.payments].sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt)));
+    const totalOutstanding=data.orders.reduce((s,o)=>s+Number(o.outstanding),0), collected=data.payments.reduce((s,p)=>s+Number(p.amount),0);
+    const controls=`<div class="toolbar-row">${btn('new-payment','＋ पेमेंट नोंदवा','primary')}</div>`;
+    const content=list.length?`<div class="table-scroll"><table><thead><tr><th>पेमेंट तारीख</th><th>ऑर्डर / बिल</th><th>ग्राहक</th><th>पद्धत</th><th>संदर्भ</th><th>रक्कम</th></tr></thead><tbody>${list.map(p=>{const o=order(p.orderId);return `<tr data-action="order-detail" data-id="${esc(p.orderId)}" class="clickable-row"><td>${dateFmt(String(p.receivedAt).slice(0,10))}</td><td><div class="cell-main">${esc(o?.number||'ऑर्डर उपलब्ध नाही')}</div><div class="cell-sub">${esc(o?.invoice||'')}</div></td><td>${esc(customer(o?.customerId)?.fullName||'—')}</td><td>${METHOD[p.method]||esc(p.method)}</td><td>${esc(p.reference||'—')}</td><td class="amount">${money(p.amount)}</td></tr>`}).join('')}</tbody></table></div>`:empty('पेमेंट नोंद नाही','पेमेंट नोंदवल्यावर व्यवहार येथे दिसेल.');
+    page.innerHTML=`${pageHeading('पेमेंट्स','वसुली आणि ऑर्डरची थकबाकी वेगवेगळी पाहा.',btn('new-payment','＋ पेमेंट नोंदवा'))}<div class="report-grid"><div class="report-card"><span>एकूण वसुली</span><strong>${money(collected)}</strong><small>नोंदवलेल्या पेमेंट्सची बेरीज</small></div><div class="report-card"><span>एकूण थकबाकी</span><strong>${money(totalOutstanding)}</strong><small>ऑर्डर एकूण − भरलेले पेमेंट</small></div><div class="report-card"><span>नोंदवलेली पेमेंट्स</span><strong>${num(list.length)}</strong><small>प्रत्येक व्यवहार वेगळा नोंदवला आहे</small></div></div>${tableShell(`पेमेंट इतिहास · ${num(list.length)}`,controls,content)}`;
+  }
+  function weeklyUsage(sub) { if(sub.period==='month') return Number(sub.usedKg)||0; return Number(sub.usedKg)||0; }
+  function addDemoSubscriptionUsage(customerId,items) {const sub=activeSubscriptions(customerId)[0];if(sub)sub.usedKg+=(items||[]).filter(item=>item.service.unit==='kg').reduce((sum,item)=>sum+Number(item.quantity),0);}
+  function renderSubscriptions() {
+    const list=[...data.subscriptions].sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
+    page.innerHTML=`${pageHeading('सदस्य योजना','योजनेची मुदत आणि ऑर्डरमधून आपोआप मोजलेला किलो वापर.',btn('new-subscription','＋ योजना जोडा'))}${list.length?`<div class="subscription-grid">${list.map(s=>{const c=customer(s.customerId),used=weeklyUsage(s),remaining=Math.max(0,s.limit-used),plan=PLANS.find(p=>p.code===s.planCode),progress=Math.min(100,used/Math.max(1,s.limit)*100);return `<article class="subscription-card"><header><span class="plan-label">${esc(plan?.periodName||(s.period==='month'?'महिना':'आठवडा'))} मर्यादा</span><span class="payment-pill ${s.active&&s.expiryDate>=today()?'payment-paid':'payment-unpaid'}">${s.active&&s.expiryDate>=today()?'सक्रिय':'मुदत संपली'}</span></header><h3>${esc(c?.fullName||'ग्राहक')}</h3><div class="subscription-name">${esc(plan?.name||s.planCode)}</div><div class="sub-metrics"><span>वापरलेले<strong>${num(used)} किलो</strong></span><span>उर्वरित<strong>${num(remaining)} किलो</strong></span><span>मासिक रक्कम<strong>${money(s.monthlyAmount)}</strong></span></div><div class="sub-progress"><div style="width:${progress}%"></div></div><footer><span>${dateFmt(s.startDate)} – ${dateFmt(s.expiryDate)}</span><span>ऑर्डरमधून आपोआप</span></footer></article>`}).join('')}</div>`:empty('सदस्य योजना उपलब्ध नाही','ग्राहकाची योजना जोडल्यानंतर येथे दिसेल.')}`;
+  }
+  function renderReports() {
+    const sales=data.orders.reduce((s,o)=>s+Number(o.total),0), collection=data.payments.reduce((s,p)=>s+Number(p.amount),0), outstanding=data.orders.reduce((s,o)=>s+Number(o.outstanding),0);
+    const byService={};data.orders.forEach(o=>(o.items||[]).forEach(i=>byService[i.name]=(byService[i.name]||0)+Number(i.amount||0)));
+    const serviceRows=Object.entries(byService).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...serviceRows.map(x=>x[1]));
+    const salesMarkup=serviceRows.length?`<div class="bar-list">${serviceRows.map(([name,value])=>`<div class="bar-row"><span>${esc(name)}</span><div class="progress-track"><div class="progress-fill" style="width:${value/max*100}%"></div></div><strong>${money(value)}</strong></div>`).join('')}</div>`:empty('विक्री उपलब्ध नाही','ऑर्डर नोंदवल्यावर येथे दिसेल.');
+    const businessMarkup=`<ul class="security-list"><li><span>✓</span>ग्राहक: ${num(data.customers.length)}</li><li><span>✓</span>एकूण ऑर्डर्स: ${num(data.orders.length)}</li><li><span>✓</span>सक्रिय सेवा: ${num(data.services.filter(s=>s.active).length)}</li><li><span>✓</span>सक्रिय सदस्य योजना: ${num(data.subscriptions.filter(s=>s.active).length)}</li></ul>`;
+    const cards=`<div class="report-grid"><div class="report-card"><span>एकूण विक्री</span><strong>${money(sales)}</strong><small>ऑर्डरची एकूण रक्कम</small></div><div class="report-card"><span>एकूण वसुली</span><strong>${money(collection)}</strong><small>प्रत्यक्ष नोंदवलेली पेमेंट्स</small></div><div class="report-card"><span>एकूण थकबाकी</span><strong>${money(outstanding)}</strong><small>एकूण विक्री − भरलेली रक्कम</small></div></div>`;
+    const panels=`<div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>सेवानुसार विक्री</h2></div>${salesMarkup}</section><section class="panel"><div class="panel-heading"><h2>व्यवसायाचा आढावा</h2></div>${businessMarkup}</section></div>`;
+    const orderTable=tableShell(`ऑर्डर अहवाल · ${num(data.orders.length)}`,'',orderRows([...data.orders].sort((a,b)=>b.placedAt.localeCompare(a.placedAt))));
+    page.innerHTML=`${pageHeading('अहवाल','विक्री म्हणजे ऑर्डरची एकूण रक्कम; वसुली म्हणजे प्रत्यक्ष मिळालेले पेमेंट.','<button class="secondary-button" data-action="export-report">↓ CSV डाउनलोड</button>')}${cards}${panels}${orderTable}`;
+  }  function renderWhatsApp() {
+    const list=[...(data.messages||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    const rows=list.length?`<div class="table-scroll"><table><thead><tr><th>वेळ</th><th>सूचना प्रकार</th><th>प्राप्तकर्ता</th><th>स्थिती</th><th>प्रयत्न</th><th>प्रदाता संदेश क्रमांक</th></tr></thead><tbody>${list.map(m=>`<tr><td>${dateFmt(String(m.createdAt||'').slice(0,10))}</td><td>${esc(m.event||'संदेश')}</td><td>${displayPhone(m.recipient)}</td><td><span class="message-state ${['sent','delivered','read'].includes(m.status)?'sent':m.status==='failed'?'failed':''}">${messageStatus[m.status]||'रांगेत'}</span>${m.error?`<div class="cell-sub">${esc(m.error)}</div>`:''}</td><td>${num(m.attempts||0)}</td><td>${esc(m.providerId||'—')}</td></tr>`).join('')}</tbody></table></div>`:empty('संदेश रांगेत नाहीत','ऑर्डरच्या सूचना येथे रांगेत जोडल्या जातील.');
+    page.innerHTML=`${pageHeading('WhatsApp संदेश','WhatsApp Cloud API द्वारे संदेश पाठवण्याची रांग आणि स्थिती.',btn('refresh','↻ अद्ययावत करा','secondary'))}<div class="mode-note" style="margin-bottom:14px"><span class="mode-dot"></span><span>${isDemo?'नमुना संदेश फक्त सरावासाठी आहेत; प्रत्यक्ष WhatsApp संदेश जात नाहीत.':'ऑनलाइन संदेश रांगेतील संदेश आणि पाठवण्याची स्थिती येथे दिसते.'}</span></div>${tableShell(`संदेश रांग · ${num(list.length)}`,'',rows)}`;
+  }
+  function renderBackup() {
+    const last=localStorage.getItem('cleaneazy.last.backup')||'';
+    page.innerHTML=`${pageHeading('बॅकअप आणि सेटिंग्ज','डेटाची JSON प्रत जतन करा; परत आणण्याआधी संपूर्ण फाइल तपासली जाईल.')}
+      <div class="backup-grid"><article class="backup-card"><div class="backup-icon">↓</div><h2>पूर्ण बॅकअप डाउनलोड</h2><p>ग्राहक, सेवा, ऑर्डर्स, पेमेंट्स, सदस्य योजना, सूचना, दर इतिहास आणि व्यवसाय सेटिंग्ज.</p><button class="secondary-button" data-action="backup-export">JSON बॅकअप डाउनलोड</button><p>शेवटचा बॅकअप: ${last?dateFmt(last):'अद्याप नाही'}</p></article><article class="backup-card"><div class="backup-icon">↑</div><h2>बॅकअपमधून डेटा परत आणा</h2><p>योग्य CleanEazy बॅकअप तपासून एकाच डेटाबेस व्यवहारात डेटा परत आणला जाईल.</p><label class="secondary-button" for="backup-file">JSON फाइल निवडा</label><input id="backup-file" type="file" accept="application/json,.json" hidden></article><article class="backup-card"><div class="backup-icon">◈</div><h2>जोडणी स्थिती</h2><p>${isDemo?'सध्या नमुना सराव मोड. डेटा फक्त या ब्राउझरच्या स्थानिक साठवणीत आहे.':'Supabase ऑनलाइन जोडणी वापरली जात आहे.'}</p><ul class="security-list"><li><span>✓</span>${isDemo?'फक्त नमुना डेटा':'सुरक्षित सत्र वापरले जात आहे'}</li><li><span>✓</span>सेवा-गुपित ब्राउझरमध्ये नाही</li><li><span>${isDemo?'○':'✓'}</span>${isDemo?'ऑनलाइन जोडणी उपलब्ध':'लॉगिन केलेल्या कर्मचाऱ्यास डेटाबेस प्रवेश'}</li></ul></article><article class="backup-card"><div class="backup-icon">⚙</div><h2>व्यवसाय माहिती</h2><div class="field"><label>व्यवसायाचे नाव</label><input value="${esc(data.settings?.businessName||'CleanEazy Laundry')}" disabled></div><div class="field" style="margin-top:10px"><label>व्यवसायाचे ठिकाण</label><input value="${esc(data.settings?.location||'पुणे, महाराष्ट्र')}" disabled></div><p>ही माहिती येथे दाखवली आहे.</p></article></div>`;
+  }
+  function customerDetail(customerId) {
+    const c=customer(customerId); if(!c) return;
+    const list=data.orders.filter(o=>o.customerId===c.id).sort((a,b)=>b.placedAt.localeCompare(a.placedAt));
+    const balance=list.reduce((s,o)=>s+Number(o.outstanding),0), payments=list.flatMap(o=>relatedPayments(o.id));
+    openModal(c.fullName,`<div class="detail-grid"><section><div class="summary-box" style="padding:14px"><div class="cell-main">${esc(c.code)}</div><p>${displayPhone(c.whatsapp)}</p><p>${esc(c.address||'पत्ता उपलब्ध नाही')}${c.area?` · ${esc(c.area)}`:''}</p><p>${esc(c.customerType||'नियमित')} · ${c.active?'सक्रिय':'बंद'}</p>${c.notes?`<p>${esc(c.notes)}</p>`:''}<button type="button" class="secondary-button" data-action="edit-customer" data-id="${esc(c.id)}">माहिती संपादित करा</button></div><div class="summary-box" style="padding:14px;margin-top:12px"><div class="cell-sub">एकूण थकबाकी</div><div class="stat-value">${money(balance)}</div><div class="cell-sub">एकूण पेमेंट्स · ${num(payments.length)}</div></div></section><section>${tableShell(`ऑर्डर इतिहास · ${num(list.length)}`,'',list.length?`<div class="table-scroll"><table><thead><tr><th>ऑर्डर</th><th>तारीख</th><th>स्थिती</th><th>एकूण</th></tr></thead><tbody>${list.map(o=>`<tr class="clickable-row" data-action="order-detail" data-id="${esc(o.id)}"><td>${esc(o.number)}</td><td>${shortDate(o.placedAt)}</td><td>${statusPill(o.status)}</td><td>${money(o.total)}</td></tr>`).join('')}</tbody></table></div>`:empty('ऑर्डर इतिहास नाही',''))}</section></div>`,'ग्राहक प्रोफाइल');
+  }
+  function orderDetail(orderId) {
+    const o=order(orderId);if(!o)return;const c=customer(o.customerId),idx=STATUSES.indexOf(o.status),payments=relatedPayments(o.id),next=STATUSES[idx+1];
+    const timeline=STATUSES.map((s,i)=>`<div class="timeline-step ${i<idx?'done':i===idx?'current':''}">${STATUS[s]}</div>`).join('');
+    const items=`<div class="table-scroll"><table><thead><tr><th>सेवा / वस्तू</th><th>प्रमाण</th><th>दर</th><th>रक्कम</th></tr></thead><tbody>${(o.items||[]).map(i=>`<tr><td><div class="cell-main">${esc(i.name)}</div><div class="cell-sub">${esc(i.item||'')}</div></td><td>${num(i.qty)} ${i.unit==='kg'?'किलो':'वस्तू'}</td><td>${money(i.rate)}</td><td class="amount">${money(i.amount)}</td></tr>`).join('')}</tbody></table></div>`;
+    const paymentContent=payments.length?payments.map(p=>`<div class="status-line" style="grid-template-columns:1fr auto"><span>${METHOD[p.method]||esc(p.method)} · ${shortDate(String(p.receivedAt).slice(0,10))}</span><strong>${money(p.amount)}</strong></div>`).join(''):empty('पेमेंट नोंद नाही','');
+    const progressButton=next?`<button type="button" class="primary-button" data-action="advance-order" data-id="${esc(o.id)}">पुढचा टप्पा: ${STATUS[next]} →</button>`:'<span class="payment-pill payment-paid">ऑर्डर पूर्ण</span>';
+    const actions=`<div class="heading-actions invoice-action" style="margin:12px 0 0">${progressButton}<button type="button" class="secondary-button" data-action="add-order-payment" data-id="${esc(o.id)}">पेमेंट नोंदवा</button><button type="button" class="plain-button" data-action="invoice" data-id="${esc(o.id)}">बिल / PDF</button></div>`;
+    openModal(`ऑर्डर ${o.number}`,`<div class="invoice-sheet"><div class="invoice-brand"><div><h2>CleanEazy Laundry</h2><p>पुणे, महाराष्ट्र</p></div><div class="invoice-number">${esc(o.invoice)}<br>${dateFmt(o.placedAt)}</div></div><div class="invoice-customer"><div>ग्राहक<br><strong>${esc(c?.fullName||'—')}</strong><br>${displayPhone(c?.whatsapp)}<br>${esc(c?.address||'')}</div><div>अपेक्षित डिलिव्हरी<br><strong>${dateFmt(o.deliveryAt)}</strong><br>${statusPill(o.status)}</div></div><div class="order-timeline">${timeline}</div>${items}<div class="invoice-totals"><div><span>उपएकूण</span><strong>${money(o.subtotal)}</strong></div><div><span>सवलत</span><strong>− ${money(o.discount)}</strong></div><div class="total"><span>एकूण</span><strong>${money(o.total)}</strong></div><div><span>भरलेली रक्कम</span><strong>${money(o.paid)}</strong></div><div><span>थकबाकी</span><strong>${money(o.outstanding)}</strong></div><div><span>पेमेंट स्थिती</span><strong>${PAYMENT_STATE[o.paymentStatus]}</strong></div></div><p class="cell-sub" style="margin-top:14px">${o.notes?`नोंद: ${esc(o.notes)}`:'कपड्यांच्या सेवेसाठी धन्यवाद.'}</p></div>${actions}<div style="margin-top:18px"><div class="panel-heading"><h2>पेमेंट इतिहास</h2></div>${paymentContent}</div>`,'ऑर्डर तपशील');
+  }
+  function customerForm(existing) {
+    const c=existing||{};openModal(existing?'ग्राहक माहिती संपादित करा':'नवीन ग्राहक','<div id="dynamic-form"></div>','ग्राहक');
+    $('#dynamic-form').innerHTML=`<div class="form-grid"><div class="field full"><label for="f-name">पूर्ण नाव *</label><input id="f-name" value="${esc(c.fullName||'')}" maxlength="120" required></div><div class="field"><label for="f-phone">WhatsApp नंबर *</label><input id="f-phone" type="tel" value="${esc(c.whatsapp||'')}" inputmode="tel" placeholder="१० अंकी मोबाइल नंबर" required><small>देश कोड आपोआप जोडला जाईल.</small></div><div class="field"><label for="f-alt">पर्यायी नंबर</label><input id="f-alt" type="tel" value="${esc(c.altNumber||'')}" inputmode="tel"></div><div class="field full"><label for="f-address">पत्ता *</label><input id="f-address" value="${esc(c.address||'')}" maxlength="250" required></div><div class="field"><label for="f-area">एरिया</label><input id="f-area" value="${esc(c.area||'')}" maxlength="80"></div><div class="field"><label for="f-type">ग्राहक प्रकार</label><select id="f-type"><option ${c.customerType==='नियमित'?'selected':''}>नियमित</option><option ${c.customerType==='सब्स्क्रिप्शन'?'selected':''}>सब्स्क्रिप्शन</option><option ${c.customerType==='व्यवसाय'?'selected':''}>व्यवसाय</option></select></div><div class="field full"><label for="f-notes">नोंदी</label><textarea id="f-notes" maxlength="1000">${esc(c.notes||'')}</textarea></div>${existing?`<div class="field full"><label><input id="f-active" type="checkbox" ${c.active?'checked':''}> ग्राहक सक्रिय</label></div>`:''}</div><div id="form-error"></div><div class="modal-actions"><button type="button" class="plain-button" data-action="close-modal">रद्द करा</button><button type="button" class="primary-button" data-action="save-customer" data-id="${esc(c.id||'')}">जतन करा</button></div>`;
+  }
+  function serviceForm(existing) {
+    const s=existing||{};openModal(existing?'सेवा आणि दर संपादित करा':'नवीन सेवा','<div id="dynamic-form"></div>','सेवा आणि दर');
+    $('#dynamic-form').innerHTML=`<div class="form-grid"><div class="field full"><label for="f-name">सेवेचे नाव *</label><input id="f-name" value="${esc(s.name||'')}" maxlength="120" required></div><div class="field"><label for="f-rate">दर (₹) *</label><input id="f-rate" type="number" min="0.01" step="0.01" value="${esc(s.rate??'')}" required></div><div class="field"><label for="f-unit">एकक *</label><select id="f-unit"><option value="kg" ${s.unit==='kg'?'selected':''}>किलो</option><option value="piece" ${s.unit==='piece'?'selected':''}>वस्तू</option></select></div><div class="field"><label for="f-category">विभाग</label><input id="f-category" value="${esc(s.category||'सामान्य')}" maxlength="80"></div><div class="field"><label for="f-description">वर्णन</label><input id="f-description" value="${esc(s.description||'')}" maxlength="200"></div>${existing?`<div class="field full"><label><input id="f-active" type="checkbox" ${s.active?'checked':''}> सेवा सक्रिय</label></div>`:''}</div><div id="form-error"></div><div class="modal-actions"><button type="button" class="plain-button" data-action="close-modal">रद्द करा</button><button type="button" class="primary-button" data-action="save-service" data-id="${esc(s.id||'')}">जतन करा</button></div>`;
+  }
+  function addOrderItemRow(serviceId='') {
+    const target=$('#order-items');if(!target)return;const row=document.createElement('div');row.className='form-grid order-item-row';row.style.cssText='grid-template-columns:1.1fr .7fr 1.1fr auto;align-items:end;padding:10px 0;border-bottom:1px solid #edf0ec';
+    row.innerHTML=`<div class="field"><label>सेवा *</label><select class="item-service"><option value="">सेवा निवडा</option>${data.services.filter(s=>s.active).map(s=>`<option value="${esc(s.id)}" ${s.id===serviceId?'selected':''}>${esc(s.name)} · ${money(s.rate)}</option>`).join('')}</select></div><div class="field"><label>प्रमाण *</label><input class="item-quantity" type="number" min="0.01" step="0.01" value="1"></div><div class="field"><label>वस्तू / नोंद</label><input class="item-name" maxlength="80" placeholder="उदा. शर्ट, साडी"></div><button type="button" class="icon-action remove-item" aria-label="सेवा काढा">×</button>`;target.append(row);
+  }
+  function subscriptionForm() {
+    const customers=data.customers.filter(c=>c.active);openModal('नवीन सब्स्क्रिप्शन','<div id="dynamic-form"></div>','सब्स्क्रिप्शन');
+    $('#dynamic-form').innerHTML=`<div class="form-grid"><div class="field full"><label for="f-customer">ग्राहक *</label><select id="f-customer"><option value="">ग्राहक निवडा</option>${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.fullName)}</option>`).join('')}</select></div><div class="field full"><label for="f-plan">प्लॅन *</label><select id="f-plan"><option value="">प्लॅन निवडा</option>${PLANS.map(p=>`<option value="${p.code}">${esc(p.name)} · ${money(p.amount)} / महिना · ${num(p.limit)} किलो / ${p.periodName}</option>`).join('')}</select></div><div class="field"><label for="f-start">सुरुवातीची तारीख *</label><input id="f-start" type="date" value="${today()}"></div><div class="field"><label for="f-expiry">मुदत संपण्याची तारीख *</label><input id="f-expiry" type="date" value="${addDays(today(),30)}"></div></div><div id="form-error"></div><div class="modal-actions"><button type="button" class="plain-button" data-action="close-modal">रद्द करा</button><button type="button" class="primary-button" data-action="save-subscription">सब्स्क्रिप्शन जोडा</button></div>`;
+  }
+  function orderForm() {
+    const customers=data.customers.filter(c=>c.active);openModal('नवी ऑर्डर तयार करा','<div id="dynamic-form"></div>','ऑर्डर');
+    $('#dynamic-form').innerHTML=`<div class="form-grid"><div class="field full"><label for="order-customer">ग्राहक *</label><select id="order-customer"><option value="">ग्राहक निवडा</option>${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.fullName)} · ${displayPhone(c.whatsapp)}</option>`).join('')}</select></div><div class="field"><label for="order-date">ऑर्डर तारीख</label><input id="order-date" type="date" value="${today()}" readonly></div><div class="field"><label for="order-delivery">अपेक्षित डिलिव्हरी *</label><input id="order-delivery" type="date" value="${addDays(today(),2)}"></div><div class="field full"><label>ऑर्डर सेवा</label><div id="order-items"></div><button type="button" class="small-link" data-action="add-item" style="margin-top:8px">＋ आणखी सेवा जोडा</button></div><div class="field full"><small>नवीन ग्राहकाच्या पहिल्या ऑर्डरवर २५% स्वागत सवलत आपोआप लागू होईल. सक्रिय सदस्य योजनेतील किलो वापर ऑर्डरमधून मोजला जातो.</small></div><div class="field"><label for="order-discount">अतिरिक्त सवलत (₹)</label><input id="order-discount" type="number" min="0" step="0.01" value="0"></div><div class="field"><label for="order-notes">नोंदी</label><input id="order-notes" maxlength="500"></div></div><div class="summary-box" id="order-total-preview" style="margin-top:13px;padding:12px;font-size:10px">एकूण रक्कम: ${money(0)}</div><div id="form-error"></div><div class="modal-actions"><button type="button" class="plain-button" data-action="close-modal">रद्द करा</button><button type="button" class="primary-button" data-action="save-order" data-idempotency="${id()}">ऑर्डर तयार करा</button></div>`;addOrderItemRow();
+  }
+  function paymentForm(preselect='') {
+    const orders=data.orders.filter(o=>o.outstanding>0);openModal('पेमेंट नोंदवा','<div id="dynamic-form"></div>','पेमेंट');
+    $('#dynamic-form').innerHTML=`<div class="form-grid"><div class="field full"><label for="pay-order">ऑर्डर *</label><select id="pay-order"><option value="">ऑर्डर निवडा</option>${orders.map(o=>`<option value="${esc(o.id)}" ${String(o.id)===String(preselect)?'selected':''}>${esc(o.number)} · ${esc(customer(o.customerId)?.fullName||'')} · थकबाकी ${money(o.outstanding)}</option>`).join('')}</select></div><div class="field"><label for="pay-amount">पेमेंट रक्कम (₹) *</label><input id="pay-amount" type="number" min="0.01" step="0.01" placeholder="रक्कम"></div><div class="field"><label for="pay-method">पद्धत *</label><select id="pay-method"><option value="cash">रोख</option><option value="upi">UPI</option><option value="card">कार्ड</option><option value="bank_transfer">बँक ट्रान्सफर</option><option value="other">इतर</option></select></div><div class="field full"><label for="pay-reference">व्यवहार संदर्भ</label><input id="pay-reference" maxlength="120" placeholder="पर्यायी"></div></div><div id="form-error"></div><div class="modal-actions"><button type="button" class="plain-button" data-action="close-modal">रद्द करा</button><button type="button" class="primary-button" data-action="save-payment" data-idempotency="${id()}" data-payment-date="${new Date().toISOString()}">पेमेंट नोंदवा</button></div>`;
+  }
+  function showFormError(message) { const target=$('#form-error');if(target)target.innerHTML=`<div class="form-error">${esc(message)}</div>`; }
+  function customerHasPriorOrder(customerId) { return data.orders.some(item=>String(item.customerId)===String(customerId)); }
+  function welcomeDiscountFor(customerId,subtotal) { return customerId&&!customerHasPriorOrder(customerId)?Math.round((subtotal*0.25+Number.EPSILON)*100)/100:0; }
+  function localOrderTotal() {
+    let subtotal=0;$$('.order-item-row').forEach(row=>{const service=data.services.find(s=>String(s.id)===$('.item-service',row)?.value),quantity=Number($('.item-quantity',row)?.value)||0;subtotal+=Number(service?.rate||0)*quantity;});
+    const customerId=$('#order-customer')?.value,offer=welcomeDiscountFor(customerId,subtotal),manual=Number($('#order-discount')?.value)||0,discount=offer+manual;$('#order-total-preview').textContent=`उपएकूण: ${money(subtotal)} · स्वागत सवलत: ${money(offer)} · अतिरिक्त सवलत: ${money(manual)} · एकूण: ${money(Math.max(0,subtotal-discount))}`;
+  }
+  function updateOrderSubscriptions() { localOrderTotal(); }
+  function updatePaymentMax() { const select=$('#pay-order'),amount=$('#pay-amount');if(!select||!amount)return;const o=order(select.value);if(o){amount.max=String(o.outstanding);amount.placeholder=`कमाल ${money(o.outstanding)}`;} }
+  function makeMessage(event,recipient) { if(!data.messages)data.messages=[];if(recipient)data.messages.unshift({id:id(),event,recipient,status:'queued',attempts:0,createdAt:new Date().toISOString(),providerId:'',error:''}); }
+  function updateOrderTotals(o) { o.outstanding=Math.max(0,Number(o.total)-Number(o.paid));o.paymentStatus=o.outstanding<=0?'paid':o.paid>0?'partial':'unpaid'; }
+  async function fetchCloud(path, options={}) {
+    const base=String(CONFIG.supabaseUrl).replace(/\/$/,''),access=session?.access_token||'';
+    const response=await fetch(`${base}${path}`,{...options,headers:{apikey:CONFIG.supabaseAnonKey,Authorization:`Bearer ${access||CONFIG.supabaseAnonKey}`,'Content-Type':'application/json',...(options.headers||{})}});
+    const text=await response.text();let body=null;try{body=text?JSON.parse(text):null;}catch(_){body=text;}
+    if(!response.ok){const error=new Error(body?.message||body?.msg||body?.error_description||body?.hint||'जोडणी अयशस्वी');error.status=response.status;throw error;}return body;
+  }
+  async function cloudLogin(email,password) {
+    const response=await fetch(`${String(CONFIG.supabaseUrl).replace(/\/$/,'')}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:CONFIG.supabaseAnonKey,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.msg||body.message||body.error_description||'लॉगिन माहिती तपासा.');session=body;localStorage.setItem(KEYS.session,JSON.stringify(session));
+  }
+  async function refreshCloudSession() {
+    if(!session?.refresh_token)return false;const response=await fetch(`${String(CONFIG.supabaseUrl).replace(/\/$/,'')}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:CONFIG.supabaseAnonKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
+    const body=await response.json().catch(()=>({}));if(!response.ok)return false;session=body;localStorage.setItem(KEYS.session,JSON.stringify(session));return true;
+  }
+  async function cloudRpc(name,args) { return fetchCloud(`/rest/v1/rpc/${encodeURIComponent(name)}`,{method:'POST',body:JSON.stringify(args)}); }
+  async function cloudSelect(table,query='select=*') { return fetchCloud(`/rest/v1/${table}?${query}`); }
+  async function cloudSelectAll(table,query='select=*') {const rows=[];const size=500;for(let offset=0;offset<1000000;offset+=size){const page=await fetchCloud(`/rest/v1/${table}?${query}`,{headers:{Range:`${offset}-${offset+size-1}`}});rows.push(...page);if(page.length<size)return rows;}throw new Error('बॅकअपसाठी नोंदींची मर्यादा ओलांडली.');}
+  async function cloudInsert(table,rows) { return fetchCloud(`/rest/v1/${table}`,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(rows)}); }
+  async function cloudPatch(table,filter,body) { return fetchCloud(`/rest/v1/${table}?${filter}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(body)}); }
+  const STATUS_DB={pickup_requested:'Pickup Requested',pickup_assigned:'Pickup Assigned',picked_up:'Picked Up',processing:'Processing',washing:'Washing',ironing:'Ironing',quality_check:'Quality Check',ready:'Ready',out_for_delivery:'Out for Delivery',delivered:'Delivered'};
+  const STATUS_FROM_DB=Object.fromEntries(Object.entries(STATUS_DB).map(([key,value])=>[value,key]));
+  const METHOD_DB={cash:'Cash',upi:'UPI',card:'Card',bank_transfer:'Bank Transfer',other:'Other'};
+  const METHOD_FROM_DB=Object.fromEntries(Object.entries(METHOD_DB).map(([key,value])=>[value,key]));
+  const EVENT_MR={order_received:'ऑर्डर नोंदवली',payment_confirmation:'पेमेंट मिळाले',pickup_assigned:'पिकअप नियुक्त',picked_up:'कपडे घेतले',processing:'प्रोसेसिंग सुरू',washing_started:'धुलाई सुरू',ironing:'इस्त्री सुरू',quality_check:'गुणवत्ता तपासणी',ready:'ऑर्डर तयार',out_for_delivery:'डिलिव्हरीसाठी बाहेर',delivered:'डिलिव्हरी पूर्ण',outstanding_reminder:'थकबाकी सूचना'};
+  const messageStatus={pending:'रांगेत',processing:'पाठवत आहे',sent:'पाठवला',delivered:'पोहोचला',read:'वाचला',failed:'अयशस्वी'};
+  function mapCustomer(c){const phone=c.whatsapp_number||c.whatsapp_number_normalized||'',type=({Regular:'नियमित',Subscription:'सब्स्क्रिप्शन',Business:'व्यवसाय'}[c.customer_type]||c.customer_type||'नियमित');return {id:String(c.id),code:c.customer_code||String(c.id).slice(0,8),fullName:c.full_name,whatsapp:phone,whatsappNormalized:c.whatsapp_number_normalized||String(phone).replace(/\D/g,'').slice(-10),altNumber:c.alternate_number||'',address:c.address||'',area:c.area||'',customerType:type,notes:c.notes||'',active:c.is_active!==false,createdAt:c.created_at?.slice(0,10)||today()};}
+  function mapService(s){return {id:String(s.id),name:s.service_name,unit:s.unit_type,rate:Number(s.rate),category:'सामान्य',description:'',active:s.active!==false&&!s.is_deleted};}
+  function mapOrder(o,items){const placed=String(o.order_date||o.created_at||today()).slice(0,10),paid=Number(o.paid_amount)||0,total=Number(o.total_amount)||0;return {id:String(o.id),number:o.order_number,invoice:o.invoice_number||o.order_number,customerId:String(o.customer_id),placedAt:placed,deliveryAt:String(o.expected_delivery_date||placed).slice(0,10),status:STATUS_FROM_DB[o.status]||o.status,subtotal:Number(o.subtotal)||0,discount:Number(o.discount)||0,total,paid,outstanding:Math.max(0,total-paid),paymentStatus:({Pending:'unpaid',Partial:'partial',Paid:'paid'}[o.payment_status]||'unpaid'),notes:o.notes||'',items:items.filter(i=>String(i.order_id)===String(o.id)).map(i=>({serviceId:String(i.service_id),name:i.item_name||'सेवा',item:i.item_description||'',qty:Number(i.quantity),unit:i.unit,rate:Number(i.rate),amount:Number(i.amount)}))};}
+  function mapPayment(p){return {id:String(p.id),orderId:String(p.order_id),amount:Number(p.amount),method:METHOD_FROM_DB[p.payment_method]||'other',receivedAt:p.payment_date,reference:p.reference_number||''};}
+  function mapSubscription(s){const plan=PLANS.find(p=>p.dbName===s.plan_name);return {id:String(s.id),customerId:String(s.customer_id),planCode:plan?.code||s.plan_name,startDate:s.start_date,expiryDate:s.expiry_date,limit:Number(s.weekly_limit_kg),period:s.limit_period||'week',usedKg:Number(s.used_kg)||0,monthlyAmount:Number(s.monthly_amount),active:s.active!==false};}
+  async function cloudLoad() {
+    const [customers,services,orders,items,payments,subscriptions,messages,reminders,settings,rateHistory]=await Promise.all([
+      cloudSelectAll('customers','select=*&order=created_at.desc,id.desc'),cloudSelectAll('services','select=*&order=service_name.asc,id.asc'),cloudSelectAll('orders','select=*&order=order_date.desc,id.desc'),cloudSelectAll('order_items','select=*&order=id.asc'),cloudSelectAll('payments','select=*&order=payment_date.desc,id.desc'),cloudSelectAll('subscriptions','select=*&order=expiry_date.asc,id.asc'),cloudSelectAll('whatsapp_messages','select=*&order=created_at.desc,id.desc'),cloudSelectAll('reminders','select=*&order=scheduled_at.desc,id.desc'),cloudSelectAll('business_settings','select=*&order=id.asc'),cloudSelectAll('service_rate_history','select=*&order=changed_at.desc,id.desc')
     ]);
-    result.slice(0,3).forEach(function(r){if(r.error)throw r.error;});
-    var orders=result[0].data||[],payments=result[1].data||[],items=result[2].data||[];lastOrders=orders;
-    var todayOrders=orders.filter(function(o){return String(o.order_date).slice(0,10)===day;});
-    var pending=orders.filter(function(o){return o.status!=='Delivered';});
-    var processing=orders.filter(function(o){return ['Processing','Washing','Ironing','Quality Check'].indexOf(o.status)>=0;});
-    var ready=orders.filter(function(o){return o.status==='Ready';});
-    var out=orders.filter(function(o){return o.status==='Out for Delivery';});
-    var deliveredToday=orders.filter(function(o){return o.status==='Delivered'&&o.delivered_at&&String(o.delivered_at).slice(0,10)===day;});
-    var todaySales=todayOrders.reduce(function(sum,o){return sum+Number(o.total_amount||0);},0);
-    var todayCollection=payments.filter(function(p){return String(p.payment_date).slice(0,10)===day;}).reduce(function(sum,p){return sum+Number(p.amount||0);},0);
-    var outstanding=orders.reduce(function(sum,o){return sum+Math.max(Number(o.total_amount||0)-Number(o.paid_amount||0),0);},0);
-    $('#dashboard-metrics').innerHTML=metric('TODAY’S ORDERS',todayOrders.length,'▤','Orders created today')+metric('PENDING ORDERS',pending.length,'◷','Not yet delivered','metric-warm')+metric('PROCESSING',processing.length,'✳','Washing through quality check')+metric('READY',ready.length,'✓','Ready to go','')+metric('OUT FOR DELIVERY',out.length,'↗','With a delivery runner')+metric('DELIVERED TODAY',deliveredToday.length,'⌂','Completed today')+metric('TODAY’S SALES',compactMoney(todaySales),'₹','Order totals created today','metric-warm')+metric('TODAY’S COLLECTION',compactMoney(todayCollection),'↙','Payments collected today')+metric('OUTSTANDING',compactMoney(outstanding),'!','Open customer balances','metric-alert')+metric('ACTIVE SUBSCRIPTIONS',result[4],'◉','Current plans');
-    drawChart($('#dashboard-chart'),orders,payments,7);
-    $('#status-summary').innerHTML=STATUS.map(function(status){var n=orders.filter(function(o){return o.status===status;}).length;return '<div class="status-row"><i class="status-dot"></i><span>'+esc(status)+'</span><b>'+n+'</b></div>';}).join('');
-    $('#recent-orders').innerHTML=orders.slice(0,6).map(function(o){return '<button class="mini-order" data-order-detail="'+o.id+'"><span><b>'+esc(o.order_number)+'</b><small>'+esc((o.customer&&o.customer.full_name)||'Customer')+' · '+esc(displayDate(o.order_date))+'</small></span><span class="money">'+money(o.total_amount)+'</span></button>';}).join('')||empty('No orders yet','Your first order will show up here.');
-    $('#service-mix').innerHTML=serviceMix(items);
-    var count=orders.filter(function(o){return STATUS.indexOf(o.status)>=0&&STATUS.indexOf(o.status)<7;}).length;$('#nav-pending-count').textContent=count?String(count):'';
+    data={customers:customers.map(mapCustomer),services:services.map(mapService),orders:orders.map(o=>mapOrder(o,items)),payments:payments.map(mapPayment),subscriptions:subscriptions.map(mapSubscription),messages:messages.map(m=>({id:String(m.id),event:EVENT_MR[m.event]||m.event,recipient:m.recipient||'',status:m.status,attempts:m.attempts,createdAt:m.created_at,providerId:m.provider_message_id||'',error:m.last_error||''})),reminders,settings:{businessName:settings[0]?.business_name||'CleanEazy Laundry',location:settings[0]?.address||'पुणे, महाराष्ट्र'},rateHistory};
   }
-  async function updatePendingBadge(){try{var q=await client.from('orders').select('status').neq('status','Delivered').limit(1000);if(!q.error){var n=(q.data||[]).length;$('#nav-pending-count').textContent=n?String(n):'';}}catch(error){console.warn('Order badge could not refresh',error);}}
-  function drawChart(node,orders,payments,days,monthStart) {
-    if(!node)return;var labels=[],sales=[],collections=[],today=new Date();
-    for(var i=days-1;i>=0;i--){var d=new Date(today);d.setDate(d.getDate()-i);var key=indiaDate(d);labels.push(key);sales.push(0);collections.push(0);}
-    var index={};labels.forEach(function(k,i){index[k]=i;});
-    (orders||[]).forEach(function(o){var k=String(o.order_date||'').slice(0,10);if(index[k]!=null)sales[index[k]]+=Number(o.total_amount||0);});
-    (payments||[]).forEach(function(p){var k=String(p.payment_date||'').slice(0,10);if(index[k]!=null)collections[index[k]]+=Number(p.amount||0);});
-    var max=Math.max.apply(null,sales.concat(collections).concat([1]));
-    node.innerHTML=labels.map(function(k,i){var h1=Math.max(sales[i]?5:0,sales[i]/max*100);var h2=Math.max(collections[i]?5:0,collections[i]/max*100);var short=displayDate(k,{day:'numeric',month:'short',timeZone:'Asia/Kolkata'});return '<div class="bar-group" title="'+esc(short)+': sales '+money(sales[i])+', collection '+money(collections[i])+'"><div class="bars"><i class="bar" style="height:'+h1+'%"></i><i class="bar collection" style="height:'+h2+'%"></i></div><span class="bar-label">'+esc(short)+'</span></div>';}).join('');
+  function enterApp() {
+    $('#login-screen').hidden=true;$('#app-shell').hidden=false;
+    $('#user-name').textContent=isDemo?'नमुना व्यवस्थापक':(session?.user?.email||'व्यवस्थापक');$('#user-role').textContent=isDemo?'डेमो वापरकर्ता':'प्रमाणित कर्मचारी';
+    $('#connection-title').textContent=isDemo?'नमुना सराव':'Supabase cloud';$('#connection-copy').textContent=isDemo?'स्थानिक डेटा':'सुरक्षित सत्र';$('#demo-banner').hidden=!isDemo||sessionStorage.getItem('cleaneazy.banner.closed')==='1';render();
+    if(new URLSearchParams(location.search).get('new')==='1'){history.replaceState({},'',location.pathname);setTimeout(orderForm,50);}
+    if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
   }
-  function serviceMix(items) {
-    var totals={};(items||[]).forEach(function(item){var name=item.service&&item.service.service_name||'Other';totals[name]=(totals[name]||0)+Number(item.amount||0);});var keys=Object.keys(totals).sort(function(a,b){return totals[b]-totals[a];}).slice(0,6),max=Math.max.apply(null,keys.map(function(k){return totals[k];}).concat([1]));
-    if(!keys.length)return empty('No service sales yet','Service totals appear after orders are created.');
-    return keys.map(function(k){return '<div class="mix-row"><span>'+esc(k)+'</span><div class="mix-track"><div class="mix-fill" style="width:'+Math.max(3,totals[k]/max*100)+'%"></div></div><span class="mix-value">'+compactMoney(totals[k])+'</span></div>';}).join('');
+  async function liveLogin() {
+    const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!hasCloud){showLoginError('Supabase जोडलेले नाही. प्रत्यक्ष लॉगिनसाठी प्रकल्प URL आणि anon key कॉन्फिगर करणे आवश्यक आहे; नमुना सराव सुरू करा.');return;}
+    try{await cloudLogin(email,password);isDemo=false;await cloudLoad();enterApp();toast('लॉगिन यशस्वी.');}catch(error){showLoginError(error.message==='Invalid login credentials'?'ई-मेल किंवा पासवर्ड चुकीचा आहे.':`लॉगिन अयशस्वी: ${error.message}`);}
   }
-
-  async function loadOrders() {
-    var host=$('#orders-list');host.innerHTML='<div class="loading-state">Loading orders…</div>';
-    var from=pages.orders*PAGE_SIZE,to=from+PAGE_SIZE-1;var query=client.from('orders').select('id,order_number,invoice_number,customer_id,order_date,expected_delivery_date,status,total_amount,paid_amount,payment_status,customer:customers(id,full_name,whatsapp_number)',{count:'exact'}).order('order_date',{ascending:false}).range(from,to);
-    var status=$('#order-status-filter').value;if(status)query=query.eq('status',status);var search=$('#orders-search').value.trim().replace(/[(),%]/g,'');if(search)query=query.or('order_number.ilike.%'+search+'%,invoice_number.ilike.%'+search+'%');
-    var r=await query;if(r.error)throw r.error;lastOrders=r.data||[];var rows=lastOrders.map(orderRow).join('');host.innerHTML=rows?dataHeader(['ORDER / CUSTOMER','ORDER DATE','STATUS','TOTAL / DUE',''] ,rows):empty('No matching orders','Try another search or create a new order.');renderPagination('orders-pagination',r.count||0,'orders');
+  async function tryRestoreSession() {
+    if(!hasCloud)return false;try{session=JSON.parse(localStorage.getItem(KEYS.session)||'null');}catch(_){session=null;}if(!session?.access_token)return false;
+    if((session.expires_at||0)*1000<Date.now()+60000){const ok=await refreshCloudSession();if(!ok){localStorage.removeItem(KEYS.session);session=null;return false;}}
+    try{isDemo=false;await cloudLoad();enterApp();return true;}catch(error){localStorage.removeItem(KEYS.session);session=null;isDemo=true;toast(`माहिती लोड झाली नाही: ${error.message}`,'error');return false;}
   }
-  function dataHeader(labels,rows) { return '<div class="data-head">'+labels.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div>'+rows; }
-  function orderRow(o) { var due=Math.max(Number(o.total_amount||0)-Number(o.paid_amount||0),0);return '<div class="data-row"><span class="primary-cell"><button class="quiet-link" data-order-detail="'+o.id+'">'+esc(o.order_number)+'</button><small class="secondary-cell">'+esc(o.customer&&o.customer.full_name||'Customer')+' · '+esc(o.customer&&o.customer.whatsapp_number||'')+'</small></span><span>'+esc(displayDate(o.order_date))+'<small class="secondary-cell">Due '+esc(displayDate(o.expected_delivery_date))+'</small></span><span>'+pill(o.status,false)+'</span><span>'+money(o.total_amount)+'<small class="secondary-cell">Due '+money(due)+'</small></span><span class="row-actions"><button class="row-action" data-order-detail="'+o.id+'">Open order</button></span></div>'; }
-  function renderPagination(id,count,table) { var host=$('#'+id);var pagesTotal=Math.max(1,Math.ceil(count/PAGE_SIZE));var page=pages[table];host.innerHTML='<span>'+esc(String(count))+' records</span><button data-page-table="'+table+'" data-page="'+Math.max(0,page-1)+'" '+(page===0?'disabled':'')+'>Previous</button><span>Page '+(page+1)+' of '+pagesTotal+'</span><button data-page-table="'+table+'" data-page="'+Math.min(pagesTotal-1,page+1)+'" '+(page>=pagesTotal-1?'disabled':'')+'>Next</button>'; }
-
-  async function loadCustomers() {
-    var host=$('#customers-list');host.innerHTML='<div class="loading-state">Loading customers…</div>';
-    var from=pages.customers*PAGE_SIZE,to=from+PAGE_SIZE-1,status=$('#customer-status-filter').value;var query=client.from('customers').select('id,customer_code,full_name,whatsapp_number,whatsapp_number_normalized,alternate_number,address,area,customer_type,notes,created_at,is_active',{count:'exact'}).order('full_name').range(from,to);
-    if(status==='active')query=query.eq('is_active',true);else if(status==='inactive')query=query.eq('is_active',false);var term=$('#customers-search').value.trim().replace(/[(),%]/g,'');if(term){var digits=normalizePhone(term);var filters=['full_name.ilike.%'+term+'%','whatsapp_number.ilike.%'+term+'%'];if(digits)filters.push('whatsapp_number_normalized.ilike.%'+digits+'%');query=query.or(filters.join(','));}
-    var r=await query;if(r.error)throw r.error;lastCustomers=r.data||[];host.innerHTML=lastCustomers.length?dataHeader(['CUSTOMER','WHATSAPP','AREA / TYPE','STATUS',''],lastCustomers.map(customerRow).join('')):empty('No customers found','Add a customer to start a laundry order.');renderPagination('customers-pagination',r.count||0,'customers');
+  async function saveCustomer(existingId) {
+    const phone=normalizePhone($('#f-phone').value),alt=normalizePhone($('#f-alt').value),customerTypes={'नियमित':'Regular','सब्स्क्रिप्शन':'Subscription','व्यवसाय':'Business'},record={full_name:$('#f-name').value.trim(),whatsapp_number:phone,whatsapp_number_normalized:phone.slice(-10),alternate_number:alt||null,address:$('#f-address').value.trim(),area:$('#f-area').value.trim(),customer_type:customerTypes[$('#f-type').value]||$('#f-type').value,notes:$('#f-notes').value.trim(),is_active:existingId?$('#f-active').checked:true};
+    if(!record.full_name||record.whatsapp_number.length!==12||record.whatsapp_number_normalized.length!==10||!record.address){showFormError('कृपया नाव, योग्य भारतीय मोबाइल नंबर आणि पत्ता भरा.');return;}
+    if(isDemo){const duplicate=data.customers.find(c=>String(c.id)!==String(existingId)&&c.active&&normalizePhone(c.whatsapp)===record.whatsapp_number);if(duplicate){showFormError('हा WhatsApp नंबर आधीपासून सक्रिय ग्राहकाकडे आहे.');return;}if(existingId){const c=customer(existingId);Object.assign(c,{fullName:record.full_name,whatsapp:record.whatsapp_number,altNumber:record.alternate_number||'',address:record.address,area:record.area,customerType:$('#f-type').value,notes:record.notes,active:record.is_active});}else data.customers.unshift({id:id(),code:`ग्राहक-${String(data.customers.length+1).padStart(3,'0')}`,fullName:record.full_name,whatsapp:record.whatsapp_number,altNumber:record.alternate_number||'',address:record.address,area:record.area,customerType:$('#f-type').value,notes:record.notes,active:true,createdAt:today()});}
+    else{try{if(existingId)await cloudPatch('customers',`id=eq.${encodeURIComponent(existingId)}`,record);else await cloudInsert('customers',[record]);await cloudLoad();}catch(error){showFormError(error.code==='23505'||/duplicate|unique|whatsapp/i.test(error.message)?'हा WhatsApp नंबर आधीपासून सक्रिय ग्राहकाकडे आहे.':`ग्राहक जतन झाला नाही: ${error.message}`);return;}}
+    persist();closeModal();render();toast(existingId?'ग्राहक माहिती जतन केली.':'ग्राहक यशस्वीरित्या जोडला गेला.');
   }
-  function customerRow(c) { return '<div class="data-row"><span class="primary-cell"><button class="quiet-link" data-customer-detail="'+c.id+'">'+esc(c.full_name)+'</button><small class="secondary-cell">'+esc(c.customer_code||'Customer')+' · '+esc(c.customer_type||'Regular')+'</small></span><span>'+esc(c.whatsapp_number||'—')+'<small class="secondary-cell">'+esc(c.alternate_number||'')+'</small></span><span>'+esc(c.area||'—')+'<small class="secondary-cell">'+esc(c.address||'')+'</small></span><span>'+pill(c.is_active?'Active':'Inactive',false)+'</span><span class="row-actions"><button class="row-action" data-customer-detail="'+c.id+'">Profile</button></span></div>'; }
-  function editCustomer(customer) {
-    customer=customer||{};var body='<form id="customer-form" data-id="'+(customer.id||'')+'"><div class="form-grid"><label class="form-field">Full name<input class="form-control" name="full_name" required maxlength="120" value="'+esc(customer.full_name||'')+'"></label><label class="form-field">WhatsApp number<input class="form-control" name="whatsapp_number" required type="tel" inputmode="tel" placeholder="+91 98765 43210" value="'+esc(customer.whatsapp_number||'')+'"></label><label class="form-field">Alternate number<input class="form-control" name="alternate_number" type="tel" value="'+esc(customer.alternate_number||'')+'"></label><label class="form-field">Customer type<select class="form-control" name="customer_type"><option>Regular</option><option>Student</option><option>Family</option><option>Corporate</option></select></label><label class="form-field">Area / neighbourhood<input class="form-control" name="area" maxlength="120" value="'+esc(customer.area||'')+'"></label><label class="form-field">Address<input class="form-control" name="address" maxlength="400" value="'+esc(customer.address||'')+'"></label><label class="form-field full-span">Notes<textarea class="form-control" name="notes" rows="3" maxlength="1000">'+esc(customer.notes||'')+'</textarea></label></div><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">'+(customer.id?'Save customer':'Add customer')+'</button></div></form>';
-    openDialog(customer.id?'Edit customer':'Add a customer',body);var select=$('[name=customer_type]');select.value=customer.customer_type||'Regular';
+  async function saveService(existingId) {
+    const record={service_name:$('#f-name').value.trim(),rate:Number($('#f-rate').value),unit_type:$('#f-unit').value,active:existingId?$('#f-active').checked:true,is_deleted:false};
+    if(!record.service_name||!Number.isFinite(record.rate)||record.rate<=0){showFormError('सेवेचे नाव आणि शून्यापेक्षा जास्त दर भरा.');return;}
+    if(isDemo){if(existingId){const s=data.services.find(v=>String(v.id)===String(existingId));if(s.rate!==record.rate)data.rateHistory.unshift({serviceId:s.id,oldRate:s.rate,newRate:record.rate,changedAt:new Date().toISOString()});Object.assign(s,{name:record.service_name,rate:record.rate,unit:record.unit_type,category:'सामान्य',description:'',active:record.active});}else data.services.push({id:id(),name:record.service_name,rate:record.rate,unit:record.unit_type,category:'सामान्य',description:'',active:true});}
+    else{try{if(existingId)await cloudPatch('services',`id=eq.${encodeURIComponent(existingId)}`,record);else await cloudInsert('services',[record]);await cloudLoad();}catch(error){showFormError(`सेवा जतन झाली नाही: ${error.message}`);return;}}
+    persist();closeModal();render();toast(existingId?'सेवा आणि दर अद्ययावत केले.':'सेवा यशस्वीरित्या जोडली.');
   }
-  async function saveCustomer(form) {
-    var fd=new FormData(form),id=form.dataset.id||null,phone=String(fd.get('whatsapp_number')||'').trim(),normalized=normalizePhone(phone);
-    if(normalized.length!==10){safeError(new Error('Enter a valid 10-digit Indian WhatsApp number.'),form);return;}
-    var duplicate=await client.from('customers').select('id').eq('whatsapp_number_normalized',normalized).eq('is_active',true).limit(1);if(duplicate.error){safeError(duplicate.error,form);return;}
-    if((duplicate.data||[]).some(function(row){return String(row.id)!==String(id);})){safeError(new Error('An active customer already uses this WhatsApp number.'),form);return;}
-    var values={full_name:String(fd.get('full_name')||'').trim(),whatsapp_number:phone,whatsapp_number_normalized:normalized,alternate_number:String(fd.get('alternate_number')||'').trim()||null,customer_type:fd.get('customer_type')||'Regular',area:String(fd.get('area')||'').trim()||null,address:String(fd.get('address')||'').trim()||null,notes:String(fd.get('notes')||'').trim()||null};
-    var r=id?await client.from('customers').update(values).eq('id',id):await client.from('customers').insert(values);if(r.error){safeError(r.error,form);return;}closeDialog();toast(id?'Customer details saved.':'Customer added.');await loadCustomers();
+  function orderPayload() {
+    const customerId=$('#order-customer').value,delivery=$('#order-delivery').value,placed=today();
+    const items=$$('.order-item-row').map(row=>{const s=data.services.find(x=>String(x.id)===$('.item-service',row).value);return {service:s,quantity:Number($('.item-quantity',row).value),item:$('.item-name',row).value.trim()};});
+    if(!customerId)return {error:'ग्राहक निवडा.'};if(!placed||!delivery||delivery<placed)return {error:'योग्य ऑर्डर आणि डिलिव्हरी तारीख निवडा.'};if(!items.length||items.some(i=>!i.service||!Number.isFinite(i.quantity)||i.quantity<=0))return {error:'प्रत्येक ऑर्डरसाठी सेवा आणि शून्यापेक्षा जास्त प्रमाण निवडा.'};
+    const subtotal=items.reduce((sum,i)=>sum+i.service.rate*i.quantity,0),manualDiscount=Number($('#order-discount').value)||0,welcomeDiscount=welcomeDiscountFor(customerId,subtotal),discount=manualDiscount+welcomeDiscount;if(manualDiscount<0||discount>subtotal)return {error:'एकूण सवलत उपएकूपेक्षा जास्त असू शकत नाही.'};
+    return {customerId,delivery,placed,items,subtotal,manualDiscount,welcomeDiscount,discount,total:subtotal-discount,notes:$('#order-notes').value.trim()};
   }
-  async function showCustomer(id) {
-    var result=await Promise.all([client.from('customers').select('*').eq('id',id).single(),client.from('orders').select('id,order_number,invoice_number,order_date,status,total_amount,paid_amount,payment_status').eq('customer_id',id).order('order_date',{ascending:false}).limit(50),client.from('subscriptions').select('id,plan_name,start_date,expiry_date,weekly_limit_kg,used_kg,active').eq('customer_id',id).order('created_at',{ascending:false}).limit(10)]);
-    result.forEach(function(r){if(r.error)throw r.error;});var c=result[0].data,orders=result[1].data||[],subs=result[2].data||[],outstanding=orders.reduce(function(sum,o){return sum+Math.max(Number(o.total_amount)-Number(o.paid_amount),0);},0);
-    var html='<div class="order-detail-grid"><div class="detail-box"><span>WHATSAPP</span><b>'+esc(c.whatsapp_number||'—')+'</b></div><div class="detail-box"><span>AREA</span><b>'+esc(c.area||'—')+'</b></div><div class="detail-box"><span>CUSTOMER CODE</span><b>'+esc(c.customer_code||'—')+'</b></div><div class="detail-box"><span>OUTSTANDING</span><b>'+money(outstanding)+'</b></div></div><p class="detail-section-title">Address &amp; notes</p><p class="form-hint">'+esc(c.address||'No address saved.')+(c.notes?'<br>'+esc(c.notes):'')+'</p><p class="detail-section-title">Order history</p>'+(orders.map(function(o){return '<div class="detail-payment-line"><span><button class="quiet-link" data-open-order="'+o.id+'">'+esc(o.order_number)+'</button> · '+esc(displayDate(o.order_date))+' · '+pill(o.status,false)+'</span><b>'+money(o.total_amount)+'</b></div>';}).join('')||empty('No orders yet',''))+'<p class="detail-section-title">Subscriptions</p>'+(subs.map(function(s){return '<div class="detail-payment-line"><span>'+esc(s.plan_name)+' · '+esc(displayDate(s.start_date))+' – '+esc(displayDate(s.expiry_date))+'</span><b>'+Number(s.used_kg||0)+' / '+Number(s.weekly_limit_kg||0)+' kg</b></div>';}).join('')||'<p class="form-hint">No subscription on file.</p>')+'<div class="detail-actions"><div><button class="button button-outline" data-customer-edit="'+c.id+'">Edit customer</button><button class="button button-outline" data-customer-toggle="'+c.id+'">'+(c.is_active?'Deactivate':'Reactivate')+'</button></div><button class="button button-green" data-action="new-order" data-customer-id="'+c.id+'">Create order</button></div>';
-    openDialog(c.full_name,html);
+  async function saveOrder() {
+    const payload=orderPayload(),button=$('[data-action="save-order"]');if(payload.error){showFormError(payload.error);return;}if(button)button.disabled=true;
+    if(isDemo){const seq=Math.max(128,...data.orders.map(o=>Number(String(o.number).match(/(\d+)$/)?.[1]||0)))+1;const lines=payload.items.map(item=>({serviceId:item.service.id,name:item.service.name,item:item.item,qty:item.quantity,unit:item.service.unit,rate:item.service.rate,amount:item.service.rate*item.quantity}));const subtotal=lines.reduce((s,i)=>s+i.amount,0),orderData={id:id(),number:`CE-२०२६-${String(seq).padStart(4,'0')}`,invoice:`INV-२०२६-${String(seq).padStart(4,'0')}`,customerId:payload.customerId,placedAt:payload.placed,deliveryAt:payload.delivery,status:'pickup_requested',subtotal,discount:payload.discount,total:subtotal-payload.discount,paid:0,outstanding:subtotal-payload.discount,paymentStatus:subtotal-payload.discount?'unpaid':'paid',notes:payload.notes,items:lines};data.orders.unshift(orderData);addDemoSubscriptionUsage(payload.customerId,payload.items);makeMessage('ऑर्डर नोंदवली',customer(payload.customerId)?.whatsapp);}
+    else{try{await cloudRpc('create_laundry_order',{p_customer_id:Number(payload.customerId),p_expected_delivery_date:payload.delivery,p_discount:payload.manualDiscount,p_paid_amount:0,p_payment_method:'Cash',p_notes:payload.notes,p_idempotency_key:button?.dataset.idempotency||id(),p_items:payload.items.map(i=>({service_id:Number(i.service.id),item_description:i.item,quantity:i.quantity,unit:i.service.unit}))});await cloudLoad();}catch(error){if(button)button.disabled=false;showFormError(`ऑर्डर तयार झाली नाही: ${error.message}`);return;}}
+    persist();closeModal();setPage('orders');toast('ऑर्डर यशस्वीरित्या तयार झाली.');
   }
-  async function toggleCustomer(id) {
-    var c=lastCustomers.find(function(item){return item.id===id;});if(!c){var found=await client.from('customers').select('id,is_active').eq('id',id).single();if(found.error)throw found.error;c=found.data;}
-    var r=await client.from('customers').update({is_active:!c.is_active}).eq('id',id);if(r.error)throw r.error;closeDialog();toast(c.is_active?'Customer deactivated.':'Customer reactivated.');loadCustomers();
+  async function savePayment() {
+    const orderId=$('#pay-order').value,amount=Number($('#pay-amount').value),method=$('#pay-method').value,reference=$('#pay-reference').value.trim(),o=order(orderId),button=$('[data-action="save-payment"]');
+    if(!o){showFormError('ऑर्डर निवडा.');return;}if(!Number.isFinite(amount)||amount<=0){showFormError('पेमेंट रक्कम शून्यापेक्षा जास्त असावी.');return;}if(amount>o.outstanding+0.00001){showFormError(`पेमेंट थकबाकी ${money(o.outstanding)} पेक्षा जास्त असू शकत नाही.`);return;}
+    if(button)button.disabled=true;
+    if(isDemo){data.payments.unshift({id:id(),orderId,amount,method,receivedAt:new Date().toISOString(),reference});o.paid+=amount;updateOrderTotals(o);makeMessage('पेमेंट प्राप्त',customer(o.customerId)?.whatsapp);}
+    else{try{await cloudRpc('record_laundry_payment',{p_order_id:Number(orderId),p_amount:amount,p_method:METHOD_DB[method],p_reference:reference,p_idempotency_key:button?.dataset.idempotency||id(),p_payment_date:button?.dataset.paymentDate||new Date().toISOString(),p_notes:null});await cloudLoad();}catch(error){if(button)button.disabled=false;showFormError(`पेमेंट नोंदवले नाही: ${error.message}`);return;}}
+    persist();closeModal();render();toast('पेमेंट यशस्वीरित्या नोंदवले.');
   }
-
-  async function loadServicesPage() {
-    var result=await Promise.all([client.from('services').select('id,service_name,unit_type,rate,active,is_deleted,updated_at').order('service_name'),client.from('service_rate_history').select('id,service_id,old_rate,new_rate,changed_at,changed_by,service:services(service_name)').order('changed_at',{ascending:false}).limit(25)]);
-    result.forEach(function(r){if(r.error)throw r.error;});lastServices=result[0].data||[];
-    $('#services-list').innerHTML=lastServices.map(function(s){return '<article class="service-admin-card"><div class="panel-head"><div><h3>'+esc(s.service_name)+'</h3><p>'+esc(s.unit_type)+' · '+(s.active&&!s.is_deleted?'<span class="service-state">Active</span>':'<span class="service-state inactive">Inactive</span>')+'</p></div>'+(staff.role==='admin'?'<button class="row-action" data-edit-service="'+s.id+'">Edit</button>':'')+'</div><div class="service-rate-line"><strong>'+money(s.rate)+'</strong><span>per '+esc(s.unit_type==='kg'?'kg':'piece')+'</span></div></article>';}).join('')||empty('No services','Add a service to start billing.');
-    $('#rate-history-list').innerHTML=(result[1].data||[]).map(function(h){return '<div class="data-row"><span class="primary-cell">'+esc(h.service&&h.service.service_name||'Service')+'<small class="secondary-cell">'+esc(displayDateTime(h.changed_at))+'</small></span><span>'+money(h.old_rate)+'</span><span>→</span><span>'+money(h.new_rate)+'</span><span>'+esc(h.changed_by||'Admin')+'</span></div>';}).join('')||empty('No rate changes yet','Changes will be recorded here.');
+  async function saveSubscription() {
+    const customerId=$('#f-customer').value,plan=PLANS.find(p=>p.code===$('#f-plan').value),start=$('#f-start').value,expiry=$('#f-expiry').value;
+    if(!customerId||!plan||!start||!expiry||expiry<start){showFormError('ग्राहक, प्लॅन आणि योग्य मुदतीच्या तारखा निवडा.');return;}
+    if(isDemo)data.subscriptions.unshift({id:id(),customerId,planCode:plan.code,startDate:start,expiryDate:expiry,limit:plan.limit,period:plan.period,usedKg:0,monthlyAmount:plan.amount,active:true});
+    else{try{await cloudInsert('subscriptions',[{customer_id:Number(customerId),plan_name:plan.dbName,start_date:start,expiry_date:expiry,weekly_limit_kg:plan.limit,limit_period:plan.period,used_kg:0,monthly_amount:plan.amount,active:true}]);await cloudLoad();}catch(error){showFormError(`सब्स्क्रिप्शन जतन झाले नाही: ${error.message}`);return;}}
+    persist();closeModal();render();toast('सब्स्क्रिप्शन जोडले.');
   }
-  function editService(service) {
-    if(!staff || staff.role!=='admin'){toast('Only an administrator can change service rates.','error');return;}
-    service=service||{};var body='<form id="service-form" data-id="'+(service.id||'')+'"><div class="form-grid"><label class="form-field full-span">Service name<input class="form-control" name="service_name" required maxlength="120" value="'+esc(service.service_name||'')+'"></label><label class="form-field">Unit<select class="form-control" name="unit_type"><option value="kg">Kilogram</option><option value="piece">Piece</option></select></label><label class="form-field">Rate (₹)<input class="form-control" name="rate" type="number" min="0.01" step="0.01" required value="'+esc(service.rate||'')+'"></label><label class="form-field"><span>Availability</span><span class="remember-label"><input type="checkbox" name="active" '+(service.active===false?'':'checked')+'> Active for new orders</span></label></div><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">Save service</button></div></form>';
-    openDialog(service.id?'Update service':'Add service',body);$('[name=unit_type]').value=service.unit_type||'kg';
+  async function advanceOrder(orderId) {
+    const o=order(orderId),idx=STATUSES.indexOf(o?.status);if(!o||idx<0)return;if(idx>=STATUSES.length-1){toast('ऑर्डर पूर्ण झाली आहे.','info');return;}const next=STATUSES[idx+1];
+    if(isDemo){o.status=next;makeMessage(STATUS[next],customer(o.customerId)?.whatsapp);}else{try{await cloudRpc('change_order_status',{p_order_id:Number(orderId),p_status:STATUS_DB[next]});await cloudLoad();}catch(error){toast(`ऑर्डरची स्थिती बदलली नाही: ${error.message}`,'error');return;}}
+    persist();orderDetail(orderId);toast(`ऑर्डरची स्थिती: ${STATUS[next]}.`);
   }
-  async function saveService(form) {
-    if(staff.role!=='admin'){safeError(new Error('Admin access is required.'),form);return;}
-    var fd=new FormData(form),id=form.dataset.id||null,values={service_name:String(fd.get('service_name')||'').trim(),unit_type:fd.get('unit_type')||'kg',rate:Number(fd.get('rate')),active:!!form.querySelector('[name=active]').checked,is_deleted:false,updated_at:new Date().toISOString()};
-    var r=id?await client.from('services').update(values).eq('id',id):await client.from('services').insert(values);if(r.error){safeError(r.error,form);return;}closeDialog();toast('Service saved.');await loadServicesPage();
+  function printableInvoice(o) {
+    const c=customer(o.customerId),popup=window.open('','_blank','width=800,height=900');if(!popup){toast('बिल उघडण्यासाठी ब्राउझरमधील नवीन पानाची परवानगी आवश्यक आहे.','error');return;}
+    const rows=(o.items||[]).map(i=>`<tr><td>${esc(i.name)}${i.item?`<small>${esc(i.item)}</small>`:''}</td><td>${num(i.qty)} ${i.unit==='kg'?'किलो':'वस्तू'}</td><td>${money(i.rate)}</td><td>${money(i.amount)}</td></tr>`).join('');
+    popup.document.write(`<!doctype html><html lang="mr-IN"><head><meta charset="utf-8"><title>${esc(o.invoice)} · CleanEazy</title><style>body{font:14px 'Nirmala UI',Mangal,sans-serif;color:#183f37;margin:40px;line-height:1.6}.head{display:flex;justify-content:space-between;border-bottom:1px solid #ccd5cc;padding-bottom:16px}h1{font-size:23px;margin:0}p{margin:2px 0;color:#64746b;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:25px}th,td{padding:11px;border-bottom:1px solid #e5e9e3;text-align:left;font-size:12px}th{background:#f6f8f4}td small{display:block;color:#7b887f}.totals{margin:22px 0 0 auto;width:250px}.totals div{display:flex;justify-content:space-between;padding:4px}.total{border-top:1px solid #bfc9c0;font-weight:bold;padding-top:10px!important}@media print{button{display:none}}</style></head><body><div class="head"><div><h1>CleanEazy Laundry</h1><p>स्वच्छ कपडे. शून्य त्रास.</p><p>पुणे, महाराष्ट्र</p></div><div style="text-align:right"><strong>बिल</strong><p>बिल क्रमांक: ${esc(o.invoice)}</p><p>ऑर्डर: ${esc(o.number)}</p><p>ऑर्डर तारीख: ${dateFmt(o.placedAt)}</p><p>डिलिव्हरी तारीख: ${dateFmt(o.deliveryAt)}</p></div></div><p style="margin-top:20px">ग्राहक: <strong>${esc(c?.fullName||'')}</strong> · ${displayPhone(c?.whatsapp)}</p><p>${esc(c?.address||'')}</p><table><thead><tr><th>सेवा / वस्तू</th><th>प्रमाण</th><th>दर</th><th>रक्कम</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div><span>उपएकूण</span><strong>${money(o.subtotal)}</strong></div><div><span>सवलत</span><strong>− ${money(o.discount)}</strong></div><div class="total"><span>एकूण</span><strong>${money(o.total)}</strong></div><div><span>भरलेली रक्कम</span><strong>${money(o.paid)}</strong></div><div><span>थकबाकी</span><strong>${money(o.outstanding)}</strong></div><div><span>पेमेंट स्थिती</span><strong>${PAYMENT_STATE[o.paymentStatus]}</strong></div></div><p style="margin-top:50px">CleanEazy Laundry च्या सेवेबद्दल धन्यवाद.</p><button onclick="window.print()">प्रिंट / PDF म्हणून जतन करा</button></body></html>`);popup.document.close();
   }
-
-  function customerOptions(selected) { return '<option value="">Choose a customer…</option>'+lastCustomers.filter(function(c){return c.is_active;}).map(function(c){return '<option value="'+c.id+'" '+(String(c.id)===String(selected)?'selected':'')+'>'+esc(c.full_name)+' · '+esc(c.whatsapp_number||'')+'</option>';}).join(''); }
-  function serviceOptions(selected) { return '<option value="">Choose a service…</option>'+lastServices.filter(function(s){return s.active&&!s.is_deleted;}).map(function(s){return '<option value="'+s.id+'" data-rate="'+s.rate+'" data-unit="'+esc(s.unit_type)+'" '+(String(s.id)===String(selected)?'selected':'')+'>'+esc(s.service_name)+' · '+money(s.rate)+' / '+esc(s.unit_type)+'</option>';}).join(''); }
-  async function newOrder(customerId) {
-    var result=await Promise.all([client.from('customers').select('id,customer_code,full_name,whatsapp_number,is_active').eq('is_active',true).order('full_name').limit(1000),client.from('services').select('id,service_name,unit_type,rate,active,is_deleted').eq('active',true).eq('is_deleted',false).order('service_name')]);
-    result.forEach(function(r){if(r.error)throw r.error;});lastCustomers=result[0].data||[];lastServices=result[1].data||[];
-    var delivery=new Date();delivery.setDate(delivery.getDate()+2);var body='<form id="order-form"><div class="form-grid"><label class="form-field">Customer<select class="form-control" name="customer_id" required>'+customerOptions(customerId)+'</select></label><label class="form-field">Expected delivery<input class="form-control" name="expected_delivery_date" type="date" min="'+indiaDate(new Date())+'" value="'+indiaDate(delivery)+'" required></label><label class="form-field">Discount (₹)<input class="form-control" name="discount" id="order-discount" type="number" min="0" step="0.01" value="0"></label><label class="form-field">Notes<input class="form-control" name="notes" maxlength="500" placeholder="Optional order notes"></label></div><div class="line-item-head"><span>SERVICE</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span></span></div><div id="order-lines">'+orderLine()+'</div><button class="add-line" type="button" data-add-line>＋ Add another service</button><div class="order-total-preview"><span>Subtotal <b id="order-subtotal">₹0.00</b></span><span>Total <b id="order-total">₹0.00</b></span></div><p class="form-hint">Rates are copied from the live service list when the order is created. Payment can be recorded after the invoice is ready.</p><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">Create order &amp; invoice</button></div></form>';
-    openDialog('Create a laundry order',body);updateOrderPreview();
+  function download(name,content,type='application/json') {
+    const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
   }
-  function orderLine(serviceId,quantity) { return '<div class="line-item"><select class="order-service" required>'+serviceOptions(serviceId)+'</select><input class="order-qty" type="number" min="0.01" step="0.01" value="'+(quantity||1)+'" aria-label="Quantity"><span class="line-amount line-rate">—</span><span class="line-amount">₹0.00</span><button class="remove-line" type="button" data-remove-line aria-label="Remove item">×</button></div>'; }
-  function addOrderLine() { var host=$('#order-lines');if(host)host.insertAdjacentHTML('beforeend',orderLine()); }
-  function updateOrderPreview() {
-    var subtotal=0;$$('.line-item').forEach(function(row){var select=$('.order-service',row),option=select&&select.selectedOptions[0],rate=Number(option&&option.dataset.rate||0),qty=Number($('.order-qty',row).value||0),amount=rate*qty;$('.line-rate',row).textContent=rate?money(rate)+' / '+(option.dataset.unit==='kg'?'kg':'pc'):'—';$('.line-amount',row).textContent=money(amount);subtotal+=amount;});
-    var discount=Math.max(0,Number($('#order-discount')&&$('#order-discount').value||0));$('#order-subtotal').textContent=money(subtotal);$('#order-total').textContent=money(Math.max(0,subtotal-discount));
+  async function exportBackup() {
+    let snapshot;
+    if(isDemo){snapshot={format:'cleaneazy-demo-backup-v1',created_at:new Date().toISOString(),data:structuredClone(data)};}
+    else{try{const tables=['customers','services','orders','order_items','payments','subscriptions','reminders','whatsapp_messages','service_rate_history','business_settings'],rows=await Promise.all(tables.map(table=>cloudSelectAll(table,'select=*&order=id.asc')));snapshot={format:'cleaneazy-backup',version:1,created_at:new Date().toISOString(),data:Object.fromEntries(tables.map((table,index)=>[table,rows[index]]))};}catch(error){toast(`बॅकअप तयार झाला नाही: ${error.message}`,'error');return;}}
+    download(`CleanEazy-बॅकअप-${today()}.json`,JSON.stringify(snapshot,null,2));localStorage.setItem('cleaneazy.last.backup',today());toast('बॅकअप डाउनलोडसाठी तयार आहे.');
   }
-  async function saveOrder(form) {
-    var fd=new FormData(form),items=[];$$('.line-item',form).forEach(function(row){var serviceId=$('.order-service',row).value,qty=Number($('.order-qty',row).value);if(serviceId&&qty>0)items.push({service_id:Number(serviceId),quantity:qty});});
-    if(!items.length){safeError(new Error('Add at least one service and quantity.'),form);return;}
-    var button=form.querySelector('button[type="submit"]');setBusy(button,true,'Creating order…');form.dataset.idempotencyKey=form.dataset.idempotencyKey||crypto.randomUUID();
-    try{var response=await client.rpc('create_laundry_order',{p_customer_id:Number(fd.get('customer_id')),p_expected_delivery_date:fd.get('expected_delivery_date'),p_discount:Number(fd.get('discount')||0),p_paid_amount:0,p_payment_method:'Cash',p_notes:String(fd.get('notes')||''),p_idempotency_key:form.dataset.idempotencyKey,p_items:items});
-      if(response.error){safeError(response.error,form);return;}var id=response.data&&response.data.id;if(!id){safeError(new Error('The database did not return an order ID.'),form);return;}
-      closeDialog();toast('Order '+(response.data.order_number||'')+' created.');await loadOrders();await showOrder(Number(id));
-    }catch(error){safeError(error,form);}finally{setBusy(button,false);}
+  async function restoreBackup(file) {
+    try{const snapshot=JSON.parse(await file.text());
+      if(isDemo){const d=snapshot?.data,required=['customers','services','orders','payments','subscriptions','messages','rateHistory'];if(snapshot?.format!=='cleaneazy-demo-backup-v1'||!d||required.some(key=>!Array.isArray(d[key]))||!d.settings||typeof d.settings!=='object')throw new Error('ही नमुना सरावासाठीची संपूर्ण बॅकअप फाइल नाही.');if(!window.confirm('या ब्राउझरमधील नमुना डेटा निवडलेल्या बॅकअपने बदलेल. पुढे जायचे?'))return;data={customers:d.customers,services:d.services,orders:d.orders,payments:d.payments,subscriptions:d.subscriptions,messages:d.messages,settings:d.settings,rateHistory:d.rateHistory};persist();render();toast('नमुना बॅकअपमधून डेटा परत आणला.');}
+      else{const tables=['customers','services','orders','order_items','payments','subscriptions','reminders','whatsapp_messages','service_rate_history','business_settings'],d=snapshot?.data;if(snapshot?.format!=='cleaneazy-backup'||snapshot?.version!==1||!d||tables.some(key=>!Array.isArray(d[key])))throw new Error('ही ऑनलाइन डेटासाठीची संपूर्ण CleanEazy बॅकअप फाइल नाही.');if(!window.confirm('ऑनलाइन साठ्यातील सध्याचा व्यवसाय डेटा या बॅकअपने बदलेल. ही कृती पूर्ववत करता येणार नाही. पुढे जायचे?'))return;try{await cloudRpc('restore_cleaneazy_backup',{p_backup:snapshot});await cloudLoad();render();toast('ऑनलाइन बॅकअपमधून डेटा परत आणला.');}catch(error){toast(`डेटा restore झाला नाही: ${error.message}`,'error');}}
+    }catch(error){toast(`बॅकअप फाइल वाचली नाही: ${error.message}`,'error');}finally{$('#backup-file').value='';}
   }
-
-  async function showOrder(id) {
-    var result=await Promise.all([client.from('orders').select('*,customer:customers(id,customer_code,full_name,whatsapp_number,address,area)').eq('id',id).single(),client.from('order_items').select('id,item_name,quantity,unit,rate,amount,service:services(service_name)').eq('order_id',id).order('id'),client.from('payments').select('id,amount,payment_method,payment_date,reference_number,notes').eq('order_id',id).order('payment_date',{ascending:true})]);
-    result.forEach(function(r){if(r.error)throw r.error;});var o=result[0].data,items=result[1].data||[],payments=result[2].data||[],customer=o.customer||{};var balance=Math.max(Number(o.total_amount||0)-Number(o.paid_amount||0),0),rank=STATUS.indexOf(o.status);
-    var stepper='<div class="workflow">'+STATUS.map(function(s,i){var cls=i<rank?'done':i===rank?'current':'';return '<div class="workflow-step '+cls+'"><i></i>'+esc(s)+'</div>';}).join('')+'</div>';
-    var lines=items.map(function(item){return '<tr><td>'+esc(item.item_name||item.service&&item.service.service_name||'Laundry service')+'</td><td>'+Number(item.quantity||0)+' '+esc(item.unit||'')+'</td><td>'+money(item.rate)+'</td><td>'+money(item.amount)+'</td></tr>';}).join('');
-    var paymentList=payments.map(function(p){return '<div class="detail-payment-line"><span>'+esc(displayDateTime(p.payment_date))+' · '+esc(p.payment_method)+' '+(p.reference_number?'· '+esc(p.reference_number):'')+'</span><b>'+money(p.amount)+'</b></div>';}).join('')||'<p class="form-hint">No payments recorded.</p>';
-    var next=rank>=0&&rank<STATUS.length-1?STATUS[rank+1]:null;
-    var html=stepper+'<div class="order-detail-grid"><div class="detail-box"><span>CUSTOMER</span><b>'+esc(customer.full_name||'Customer')+'</b><small class="secondary-cell">'+esc(customer.whatsapp_number||'')+'</small></div><div class="detail-box"><span>ORDER STATUS</span><b>'+pill(o.status,false)+'</b></div><div class="detail-box"><span>ORDER DATE</span><b>'+esc(displayDateTime(o.order_date))+'</b></div><div class="detail-box"><span>EXPECTED DELIVERY</span><b>'+esc(displayDate(o.expected_delivery_date))+'</b></div><div class="detail-box"><span>INVOICE</span><b>'+esc(o.invoice_number||o.order_number)+'</b></div><div class="detail-box"><span>ASSIGNED PICKUP</span><b>'+esc(o.pickup_assigned_to||'Not assigned')+'</b></div></div><table class="invoice-table"><thead><tr><th>Service</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+lines+'</tbody></table><div class="invoice-totals"><div class="invoice-total-row"><span>Subtotal</span><strong>'+money(o.subtotal)+'</strong></div><div class="invoice-total-row"><span>Discount</span><strong>− '+money(o.discount)+'</strong></div><div class="invoice-total-row grand"><span>Total</span><strong>'+money(o.total_amount)+'</strong></div><div class="invoice-total-row"><span>Paid</span><strong>'+money(o.paid_amount)+'</strong></div><div class="invoice-total-row"><span>Outstanding</span><strong>'+money(balance)+'</strong></div><div class="invoice-total-row"><span>Payment status</span><strong>'+pill(o.payment_status,true)+'</strong></div></div><p class="detail-section-title">Payment history</p>'+paymentList+'<div class="detail-actions"><div><button class="button button-outline" data-print-invoice="'+id+'">Print / Save PDF</button>'+(balance>0?'<button class="button button-outline" data-take-payment="'+id+'">＋ Record payment</button>':'')+'</div><div>'+(next?'<button class="button button-green" data-advance-order data-id="'+id+'" data-next="'+esc(next)+'">Move to '+esc(next)+' <span>→</span></button>':'')+'</div></div>';
-    openDialog('Order '+(o.order_number||''),html,'');
+  function exportReport() {
+    const rows=[['ऑर्डर क्रमांक','ग्राहक','ऑर्डर तारीख','स्थिती','एकूण','भरलेले','थकबाकी'],...data.orders.map(o=>[o.number,customer(o.customerId)?.fullName||'',o.placedAt,STATUS[o.status],o.total,o.paid,o.outstanding])];
+    const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');download(`CleanEazy-अहवाल-${today()}.csv`,csv,'text/csv;charset=utf-8');
   }
-  async function advanceOrder(id,next) {
-    if(next==='Pickup Assigned'){
-      var assigned=window.prompt('Who is assigned to this pickup? Enter a team member name.');if(assigned===null)return;if(!assigned.trim()){toast('Enter the pickup assignee before moving the order.','error');return;}
-    }
-    var r=await client.rpc('change_order_status',{p_order_id:id,p_status:next});if(r.error){toast(r.error.message,'error');return;}
-    if(next==='Pickup Assigned'){var u=await client.from('orders').update({pickup_assigned_to:assigned.trim()}).eq('id',id);if(u.error){toast('Status moved, but the pickup assignee could not be saved: '+u.error.message,'error');return;}}
-    toast('Order moved to '+next+'.');await loadOrders();await showOrder(id);await updatePendingBadge();
+  async function logout() {
+    if(!isDemo&&session?.access_token){try{await fetch(`${String(CONFIG.supabaseUrl).replace(/\/$/,'')}/auth/v1/logout`,{method:'POST',headers:{apikey:CONFIG.supabaseAnonKey,Authorization:`Bearer ${session.access_token}`}});}catch(_){}}
+    session=null;localStorage.removeItem(KEYS.session);data=null;isDemo=true;$('#app-shell').hidden=true;$('#login-screen').hidden=false;$('#login-password').value='';$('#login-error')?.remove();setPage('dashboard');
   }
-  function paymentForm(orderId) {
-    var html='<form id="payment-form" data-order="'+orderId+'"><div class="form-grid"><label class="form-field">Amount (₹)<input class="form-control" name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">Method<select class="form-control" name="method"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Other</option></select></label><label class="form-field">Payment date<input class="form-control" name="payment_date" type="date" value="'+indiaDate(new Date())+'" required></label><label class="form-field">Reference number<input class="form-control" name="reference" maxlength="100" placeholder="Optional transaction reference"></label><label class="form-field full-span">Notes<textarea class="form-control" name="notes" rows="2" maxlength="500"></textarea></label></div><p class="form-hint">The database checks that a payment is positive and does not exceed the remaining balance.</p><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">Record payment</button></div></form>';
-    openDialog('Record a payment',html);
-  }
-  async function savePayment(form) {
-    var fd=new FormData(form),amount=Number(fd.get('amount'));if(amount<=0){safeError(new Error('Enter a payment greater than zero.'),form);return;}
-    var button=form.querySelector('button[type="submit"]');setBusy(button,true,'Recording payment…');form.dataset.idempotencyKey=form.dataset.idempotencyKey||crypto.randomUUID();
-    try{var paymentDate=new Date(String(fd.get('payment_date'))+'T12:00:00+05:30').toISOString();var response=await client.rpc('record_laundry_payment',{p_order_id:Number(form.dataset.order),p_amount:amount,p_method:fd.get('method'),p_reference:String(fd.get('reference')||''),p_idempotency_key:form.dataset.idempotencyKey,p_payment_date:paymentDate,p_notes:String(fd.get('notes')||'').trim()||null});
-      if(response.error){safeError(response.error,form);return;}var id=Number(form.dataset.order);closeDialog();toast('Payment recorded.');await loadPayments();await showOrder(id);
-    }catch(error){safeError(error,form);}finally{setBusy(button,false);}
-  }
-
-  async function loadPayments() {
-    var host=$('#payments-list');host.innerHTML='<div class="loading-state">Loading payment history…</div>';
-    var from=pages.payments*PAGE_SIZE,to=from+PAGE_SIZE-1;var query=client.from('payments').select('id,order_id,amount,payment_method,payment_date,reference_number,order:orders(order_number,customer:customers(full_name))',{count:'exact'}).order('payment_date',{ascending:false}).range(from,to);
-    var day=$('#payment-date-filter').value;if(day){var bounds=timeBounds(day);query=query.gte('payment_date',bounds.from).lte('payment_date',bounds.to);}
-    var r=await query;if(r.error)throw r.error;var rows=r.data||[];
-    var sum=rows.reduce(function(a,x){return a+Number(x.amount||0);},0);$('#payment-metrics').innerHTML=metric('PAYMENTS SHOWN',rows.length,'↙','Based on the current filters')+metric('COLLECTED SHOWN',compactMoney(sum),'₹','Payments in this page','metric-warm')+metric('TODAY’S COLLECTION',compactMoney(await collectionOn(indiaDate(new Date()))),'✓','All payments collected today')+metric('PAYMENT METHODS',new Set(rows.map(function(x){return x.payment_method;})).size,'◇','Methods used on this page');
-    host.innerHTML=rows.length?dataHeader(['CUSTOMER / ORDER','PAYMENT DATE','METHOD / REFERENCE','AMOUNT',''],rows.map(function(p){return '<div class="data-row"><span class="primary-cell">'+esc(p.order&&p.order.customer&&p.order.customer.full_name||'Customer')+'<small class="secondary-cell"><button class="quiet-link" data-payment-order="'+p.order_id+'">'+esc(p.order&&p.order.order_number||'Order')+'</button></small></span><span>'+esc(displayDateTime(p.payment_date))+'</span><span>'+esc(p.payment_method)+'<small class="secondary-cell">'+esc(p.reference_number||'—')+'</small></span><span>'+money(p.amount)+'</span><span class="row-actions"><button class="row-action" data-payment-order="'+p.order_id+'">Open order</button></span></div>';}).join('')):empty('No payments found','Payments appear after they are recorded against an order.');renderPagination('payments-pagination',r.count||0,'payments');
-  }
-  async function collectionOn(day) { var b=timeBounds(day);var r=await client.from('payments').select('amount').gte('payment_date',b.from).lte('payment_date',b.to).limit(5000);if(r.error)throw r.error;return (r.data||[]).reduce(function(sum,x){return sum+Number(x.amount||0);},0); }
-
-  async function loadSubscriptions() {
-    var search=$('#subscriptions-search').value.trim().toLowerCase(),filter=$('#subscription-status-filter').value,day=indiaDate(new Date());
-    var r=await client.from('subscriptions').select('id,customer_id,plan_name,start_date,expiry_date,registration_fee,weekly_limit_kg,used_kg,monthly_amount,active,notes,usage_week_start,customer:customers(full_name,whatsapp_number,area)').order('expiry_date',{ascending:true}).limit(1000);if(r.error)throw r.error;
-    lastSubscriptions=r.data||[];var shown=lastSubscriptions.filter(function(s){var active=!!s.active&&s.expiry_date>=day;if(filter==='active'&&!active)return false;if(filter==='expired'&&active)return false;if(search&&!(String(s.plan_name).toLowerCase().indexOf(search)>=0||String(s.customer&&s.customer.full_name||'').toLowerCase().indexOf(search)>=0))return false;return true;});
-    $('#subscriptions-list').innerHTML=shown.length?shown.map(function(s){var lim=Number(s.weekly_limit_kg||0),used=Number(s.used_kg||0),remaining=Math.max(lim-used,0),pct=lim?Math.min(100,used/lim*100):0;return '<article class="subscription-card"><h3>'+esc(s.customer&&s.customer.full_name||'Customer')+'</h3><p class="plan-name">'+esc(s.plan_name)+'</p><div class="subscription-meta"><div><span>REGISTRATION</span><b>'+money(s.registration_fee)+'</b></div><div><span>MONTHLY</span><b>'+money(s.monthly_amount)+'</b></div><div><span>EXPIRES</span><b>'+esc(displayDate(s.expiry_date))+'</b></div><div><span>WEEKLY ALLOWANCE</span><b>'+lim+' kg</b></div><div><span>REMAINING THIS WEEK</span><b>'+remaining+' kg</b></div></div><div class="usage-meter"><span style="width:'+pct+'%"></span></div><div class="usage-caption"><span>'+used+' kg used</span><span>'+esc(s.active&&s.expiry_date>=day?'Active':'Inactive')+'</span></div><div class="row-actions"><button class="row-action" data-toggle-subscription="'+s.id+'">'+(s.active?'Deactivate':'Reactivate')+'</button></div></article>';}).join(''):empty('No subscriptions match','Create a plan to track weekly laundry allowance.');
-  }
-  async function newSubscription() {
-    var r=await client.from('customers').select('id,full_name,whatsapp_number,is_active').eq('is_active',true).order('full_name').limit(1000);if(r.error)throw r.error;lastCustomers=r.data||[];
-    var opts=PLANS.map(function(p){return '<option value="'+esc(p.name)+'" data-registration="'+p.registration+'" data-monthly="'+p.monthly+'" data-kg="'+p.kg+'">'+esc(p.name)+' · '+money(p.monthly)+'/month</option>';}).join('');var start=indiaDate(new Date()),expiry=new Date();expiry.setFullYear(expiry.getFullYear()+1);
-    var body='<form id="subscription-form"><div class="form-grid"><label class="form-field">Customer<select class="form-control" name="customer_id" required>'+customerOptions('')+'</select></label><label class="form-field">Plan<select class="form-control" name="plan_name" required><option value="">Choose a plan…</option>'+opts+'</select></label><label class="form-field">Start date<input class="form-control" name="start_date" type="date" value="'+start+'" required></label><label class="form-field">Expiry date<input class="form-control" name="expiry_date" type="date" value="'+indiaDate(expiry)+'" required></label><label class="form-field">Registration fee (₹)<input class="form-control" name="registration_fee" type="number" min="0" step="0.01" required></label><label class="form-field">Weekly kg allowance<input class="form-control" name="weekly_limit_kg" type="number" min="0.01" step="0.01" required></label><label class="form-field">Monthly amount (₹)<input class="form-control" name="monthly_amount" type="number" min="0" step="0.01" required></label><label class="form-field full-span">Notes<input class="form-control" name="notes" maxlength="500"></label></div><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">Save subscription</button></div></form>';
-    openDialog('Start a subscription',body);$('[name=plan_name]').addEventListener('change',function(){var option=this.selectedOptions[0];$('[name=registration_fee]').value=option.dataset.registration||'';$('[name=weekly_limit_kg]').value=option.dataset.kg||'';$('[name=monthly_amount]').value=option.dataset.monthly||'';});
-  }
-  async function saveSubscription(form) {
-    var fd=new FormData(form),week=new Date(fd.get('start_date')+'T12:00:00');var day=(week.getDay()+6)%7;week.setDate(week.getDate()-day);
-    var values={customer_id:Number(fd.get('customer_id')),plan_name:fd.get('plan_name'),start_date:fd.get('start_date'),expiry_date:fd.get('expiry_date'),registration_fee:Number(fd.get('registration_fee')),weekly_limit_kg:Number(fd.get('weekly_limit_kg')),used_kg:0,monthly_amount:Number(fd.get('monthly_amount')),active:true,notes:String(fd.get('notes')||'').trim()||null,usage_week_start:indiaDate(week)};
-    if(values.expiry_date<values.start_date){safeError(new Error('Expiry date must be on or after the start date.'),form);return;}
-    var r=await client.from('subscriptions').insert(values);if(r.error){safeError(r.error,form);return;}closeDialog();toast('Subscription added.');await loadSubscriptions();
-  }
-  async function toggleSubscription(id) { var item=lastSubscriptions.find(function(x){return x.id===id;});if(!item)return;var r=await client.from('subscriptions').update({active:!item.active}).eq('id',id);if(r.error)throw r.error;toast(item.active?'Subscription deactivated.':'Subscription reactivated.');await loadSubscriptions(); }
-
-  async function loadReports() {
-    var month=$('#report-month').value||indiaDate(new Date()).slice(0,7),from=month+'-01',parts=month.split('-'),lastDay=new Date(Number(parts[0]),Number(parts[1]),0).getDate(),to=month+'-'+String(lastDay).padStart(2,'0'),bounds=timeBounds(to),start=from+'T00:00:00+05:30';
-    var r=await Promise.all([client.from('orders').select('id,order_number,customer_id,order_date,status,total_amount,paid_amount,expected_delivery_date,customer:customers(full_name,whatsapp_number)').gte('order_date',start).lte('order_date',bounds.to).order('order_date',{ascending:false}).limit(5000),client.from('payments').select('id,amount,payment_date,order_id').gte('payment_date',start).lte('payment_date',bounds.to).order('payment_date',{ascending:false}).limit(5000),client.from('order_items').select('amount,service:services(service_name)').limit(5000),client.from('orders').select('id,order_number,customer_id,order_date,status,total_amount,paid_amount,customer:customers(full_name,whatsapp_number)').gt('total_amount',0).order('order_date',{ascending:false}).limit(5000)]);
-    r.forEach(function(x){if(x.error)throw x.error;});var orders=r[0].data||[],payments=r[1].data||[],items=r[2].data||[],openOrders=(r[3].data||[]).filter(function(o){return Number(o.total_amount)>Number(o.paid_amount);});
-    var sales=orders.reduce(function(a,o){return a+Number(o.total_amount||0);},0),collection=payments.reduce(function(a,p){return a+Number(p.amount||0);},0),outstanding=openOrders.reduce(function(a,o){return a+Math.max(Number(o.total_amount)-Number(o.paid_amount),0);},0);
-    $('#report-metrics').innerHTML=metric('SALES',compactMoney(sales),'₹','Orders placed in '+month,'metric-warm')+metric('COLLECTION',compactMoney(collection),'↙','Payments received in '+month)+metric('OUTSTANDING',compactMoney(outstanding),'!','Current open order balances','metric-alert')+metric('ORDERS',orders.length,'▤','Orders created in this month');
-    drawChart($('#report-chart'),orders,payments,7);$('#report-service-mix').innerHTML=serviceMix(items);
-    $('#outstanding-list').innerHTML=openOrders.slice(0,100).map(function(o){var due=Number(o.total_amount)-Number(o.paid_amount);return '<div class="data-row"><span class="primary-cell"><button class="quiet-link" data-order-detail="'+o.id+'">'+esc(o.order_number)+'</button><small class="secondary-cell">'+esc(o.customer&&o.customer.full_name||'Customer')+'</small></span><span>'+esc(o.customer&&o.customer.whatsapp_number||'—')+'</span><span>'+money(o.total_amount)+'</span><span>'+money(o.paid_amount)+'</span><span class="primary-cell">'+money(due)+'</span></div>';}).join('')||empty('No outstanding balances','All recorded orders are paid.');
-  }
-  function exportOutstanding() {
-    var rows=$$('#outstanding-list .data-row').map(function(row){return Array.prototype.map.call(row.querySelectorAll('span'),function(cell){return '"'+cell.innerText.replace(/"/g,'""').replace(/\s+/g,' ').trim()+'"';}).join(',');});var csv=['"Order / customer","Phone","Total","Paid","Outstanding"'].concat(rows).join('\r\n');downloadFile('cleaneazy-outstanding-'+indiaDate(new Date())+'.csv',csv,'text/csv;charset=utf-8');
-  }
-
-  async function loadMessages() {
-    var query=client.from('whatsapp_messages').select('id,order_id,customer_id,event,recipient,template_name,status,attempts,provider_message_id,last_error,created_at,sent_at,next_attempt_at,customer:customers(full_name),order:orders(order_number)').order('created_at',{ascending:false}).limit(200);
-    var status=$('#message-status-filter').value;if(status)query=query.eq('status',status);var r=await query;if(r.error)throw r.error;var rows=r.data||[];
-    $('#messages-list').innerHTML=rows.length?dataHeader(['CUSTOMER / EVENT','CREATED','TEMPLATE / ATTEMPTS','STATUS',''],rows.map(function(m){return '<div class="data-row"><span class="primary-cell">'+esc(m.customer&&m.customer.full_name||m.recipient)+'<small class="secondary-cell">'+esc(m.event)+' · '+esc(m.order&&m.order.order_number||'')+'</small></span><span>'+esc(displayDateTime(m.created_at))+'<small class="secondary-cell">'+esc(m.sent_at?'Sent '+displayDateTime(m.sent_at):'')+'</small></span><span>'+esc(m.template_name||'Template pending')+'<small class="secondary-cell">Attempts '+Number(m.attempts||0)+'</small></span><span>'+pill(m.status,false)+'</span><span class="row-actions">'+(m.last_error?'<span class="secondary-cell" title="'+esc(m.last_error)+'">See error</span>':'')+(staff&&staff.role==='admin'&&m.status==='failed'?'<button class="row-action" data-retry-message="'+m.id+'">Retry</button>':'')+'</span></div>';}).join('')):empty('Queue is clear','Customer updates will appear here after order activity.');
-    var pending=rows.filter(function(m){return m.status==='pending';}).length;if(!window.CLEANEAZY_WHATSAPP_READY)$('#whatsapp-config-note').textContent='Meta WhatsApp credentials and approved templates are not configured yet. '+pending+' message(s) may be queued; delivery will remain paused until configuration is complete.';
-  }
-  async function processMessages() {
-    var button=$('#process-messages');setBusy(button,true,'Checking message queue…');
-    try { var r=await client.functions.invoke('send-whatsapp',{body:{limit:10}});if(r.error)throw r.error;var result=r.data||{};if(result.code==='WHATSAPP_NOT_CONFIGURED'){toast('Meta WhatsApp Cloud API credentials are missing. Queue left untouched.','info');return;}var done=(result.results||[]).filter(function(x){return x.ok;}).length;toast(done+' message(s) sent.');await loadMessages(); }
-    catch(error){var message=error.message||'WhatsApp queue could not run.';if(message.indexOf('503')>=0||message.indexOf('NOT_CONFIGURED')>=0)message='Meta WhatsApp credentials are not configured yet. The queue is still available.';toast(message,'error');}
-    finally{setBusy(button,false);}
-  }
-
-  async function retryMessage(id) {
-    if(!staff||staff.role!=='admin'){toast('Administrator access is required to retry a message.','error');return;}
-    var r=await client.from('whatsapp_messages').update({status:'pending',attempts:0,next_attempt_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('status','failed');
-    if(r.error)throw r.error;toast('Message returned to the queue.');await loadMessages();
-  }
-
-  async function loadReminders() {
-    if(!staff||staff.role!=='admin')return;
-    var query=client.from('reminders').select('id,customer_id,order_id,reminder_type,scheduled_at,message,status,sent_at,attempts,last_error,customer:customers(full_name,whatsapp_number),order:orders(order_number)').order('scheduled_at',{ascending:false}).limit(300);
-    var status=$('#reminder-status-filter').value;if(status)query=query.eq('status',status);var r=await query;if(r.error)throw r.error;var rows=r.data||[];
-    $('#reminders-list').innerHTML=rows.length?dataHeader(['CUSTOMER / TYPE','SCHEDULED','MESSAGE','STATUS',''],rows.map(function(item){return '<div class="data-row"><span class="primary-cell">'+esc(item.customer&&item.customer.full_name||'Customer')+'<small class="secondary-cell">'+esc(item.reminder_type)+(item.order&&item.order.order_number?' · '+esc(item.order.order_number):'')+'</small></span><span>'+esc(displayDateTime(item.scheduled_at))+'<small class="secondary-cell">'+Number(item.attempts||0)+' attempts</small></span><span class="primary-cell">'+esc(item.message||'—')+(item.last_error?'<small class="secondary-cell">'+esc(item.last_error)+'</small>':'')+'</span><span>'+pill(item.status,false)+'</span><span class="row-actions">'+(item.status==='pending'?'<button class="row-action" data-cancel-reminder="'+item.id+'">Cancel</button>':'')+'</span></div>';}).join('')):empty('No reminders yet','Schedule one to see it here.');
-  }
-
-  async function newReminder() {
-    if(!staff||staff.role!=='admin'){toast('Administrator access is required.','error');return;}
-    var r=await client.from('customers').select('id,full_name,whatsapp_number,is_active').eq('is_active',true).order('full_name').limit(1000);if(r.error)throw r.error;lastCustomers=r.data||[];
-    var types=['Laundry Reminder','Outstanding Reminder','Subscription Expiry'].map(function(name){return '<option>'+name+'</option>';}).join('');
-    var body='<form id="reminder-form"><div class="form-grid"><label class="form-field">Customer<select class="form-control" name="customer_id" required>'+customerOptions('')+'</select></label><label class="form-field">Reminder type<select class="form-control" name="reminder_type">'+types+'</select></label><label class="form-field full-span">Schedule date and time (Pune time)<input class="form-control" name="scheduled_at" type="datetime-local" value="'+indiaDate(new Date(Date.now()+86400000))+'T10:00" required></label><label class="form-field full-span">Message<textarea class="form-control" name="message" rows="3" maxlength="1000" placeholder="A helpful message to send using the approved WhatsApp template"></textarea></label></div><p class="form-hint">The hourly scheduler will queue this reminder when it is due. Ensure the matching WhatsApp template is approved in Meta.</p><p class="form-error"></p><div class="form-footer"><button class="button button-outline" type="button" data-close>Cancel</button><button class="button button-green" type="submit">Schedule reminder</button></div></form>';
-    openDialog('Schedule a reminder',body);
-  }
-
-  async function saveReminder(form) {
-    var fd=new FormData(form),local=String(fd.get('scheduled_at')||''),scheduledAt;
-    try{scheduledAt=new Date(local+':00+05:30').toISOString();}catch(_){safeError(new Error('Choose a valid date and time.'),form);return;}
-    if(new Date(scheduledAt).getTime()<Date.now()){safeError(new Error('Choose a future time.'),form);return;}
-    var type=String(fd.get('reminder_type')),custom=String(fd.get('message')||'').trim(),defaults={'Laundry Reminder':'It may be time for your next laundry pickup. Reply to schedule one.','Outstanding Reminder':'You have an outstanding CleanEazy order balance. Please contact us if you have already paid.','Subscription Expiry':'Your CleanEazy subscription is due for renewal.'};
-    var button=form.querySelector('button[type="submit"]');setBusy(button,true,'Scheduling…');
-    try{var r=await client.from('reminders').insert({customer_id:Number(fd.get('customer_id')),reminder_type:type,scheduled_at:scheduledAt,message:custom||defaults[type],status:'pending',idempotency_key:'manual:'+crypto.randomUUID()});if(r.error){safeError(r.error,form);return;}closeDialog();toast('Reminder scheduled.');await loadReminders();}
-    catch(error){safeError(error,form);}finally{setBusy(button,false);}
-  }
-
-  async function cancelReminder(id) {
-    if(!staff||staff.role!=='admin')return;var r=await client.from('reminders').update({status:'cancelled'}).eq('id',id).eq('status','pending');if(r.error)throw r.error;toast('Reminder cancelled.');await loadReminders();
-  }
-
-  async function fetchAll(table) {
-    var rows=[],offset=0,chunk=1000;while(true){var r=await client.from(table).select('*').order('id',{ascending:true}).range(offset,offset+chunk-1);if(r.error)throw r.error;var batch=r.data||[];rows=rows.concat(batch);if(batch.length<chunk)break;offset+=chunk;if(offset>=100000)throw new Error('Export stopped at 100,000 records for '+table+' to protect browser memory.');}return rows;
-  }
-  async function createBackup() {
-    if(!staff||staff.role!=='admin'){toast('Only an administrator can create full business backups.','error');return;}
-    var button=$('#create-backup');setBusy(button,true,'Preparing private JSON…');
-    try { var data={};for(var i=0;i<TABLES.length;i++)data[TABLES[i]]=await fetchAll(TABLES[i]);var counts={};TABLES.forEach(function(t){counts[t]=data[t].length;});var payload={format:'cleaneazy-backup',version:1,exported_at:new Date().toISOString(),business:'CleanEazy Laundry',data:data,counts:counts};
-      downloadFile('CleanEazy-backup-'+indiaDate(new Date())+'.json',JSON.stringify(payload,null,2),'application/json');
-      var saved=await client.from('backup_exports').insert({created_by:user.id,export_type:'json',record_counts:counts});if(saved.error)throw saved.error;toast('Backup downloaded with '+Object.values(counts).reduce(function(a,b){return a+b;},0)+' records.');await loadBackupHistory();
-    } catch(error){fail(error,'Backup export failed');} finally{setBusy(button,false);}
-  }
-  async function restoreBackup(event) {
-    var file=event.target.files&&event.target.files[0];if(!file)return;if(!staff||staff.role!=='admin'){toast('Only an administrator can restore a backup.','error');event.target.value='';return;}
-    try { var text=await file.text(),backup=JSON.parse(text);if(backup.format!=='cleaneazy-backup'||backup.version!==1||!backup.data)throw new Error('This file is not a supported CleanEazy backup.');
-      var counts=backup.counts||{};var summary=Object.keys(counts).map(function(k){return k+': '+counts[k];}).join('\n');if(!window.confirm('Restore this CleanEazy backup?\n\nExisting matching IDs will be updated. New linked records will be inserted. Reminder and unsent WhatsApp work stays paused for review.\n\n'+summary))return;
-      var result=await client.rpc('restore_cleanEazy_backup',{p_backup:backup});if(result.error)throw result.error;toast('Restore completed. '+JSON.stringify(result.data&&result.data.counts||result.data));await loadBackupHistory();
-    } catch(error){fail(error,'Restore failed');} finally{event.target.value='';}
-  }
-  function downloadFile(name,content,type) { var blob=new Blob([content],{type:type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(function(){URL.revokeObjectURL(url);},1500); }
-  async function loadBackupHistory() {
-    if(!staff||staff.role!=='admin'){ $('#backup-history').innerHTML=empty('Administrator access only','');return; }
-    var r=await client.from('backup_exports').select('id,created_at,export_type,record_counts').order('created_at',{ascending:false}).limit(30);if(r.error)throw r.error;
-    $('#backup-history').innerHTML=(r.data||[]).map(function(b){var n=Object.values(b.record_counts||{}).reduce(function(a,x){return a+Number(x||0);},0);return '<div class="data-row"><span class="primary-cell">'+esc(b.export_type||'JSON backup')+'<small class="secondary-cell">'+esc(displayDateTime(b.created_at))+'</small></span><span>'+n+' records</span><span class="hide-mobile">'+esc(Object.keys(b.record_counts||{}).length)+' record types</span><span></span><span></span></div>';}).join('')||empty('No exports yet','Your first backup will appear here.');
-  }
-
-  async function loadTeam() {
-    if(!staff||staff.role!=='admin'){ $('#team-list').innerHTML=empty('Administrator access only','');return; }
-    var r=await client.functions.invoke('manage-staff',{body:{action:'list'}});if(r.error)throw r.error;var rows=r.data&&r.data.members||[];
-    $('#team-list').innerHTML=rows.length?dataHeader(['TEAM MEMBER','EMAIL','ROLE','STATUS',''],rows.map(function(m){return '<div class="data-row"><span class="primary-cell">'+esc(m.display_name||m.email||'Team member')+'<small class="secondary-cell">'+(m.user_id===user.id?'You':'Team account')+'</small></span><span>'+esc(m.email||'—')+'</span><span><select class="form-control" data-team-update="role" data-user-id="'+esc(m.user_id)+'"><option value="staff" '+(m.role==='staff'?'selected':'')+'>Staff</option><option value="admin" '+(m.role==='admin'?'selected':'')+'>Admin</option></select></span><span>'+pill(m.active?'Active':'Inactive',false)+'</span><span class="row-actions">'+(m.user_id!==user.id?'<button class="row-action" data-user-id="'+esc(m.user_id)+'" data-team-update="active">'+(m.active?'Deactivate':'Reactivate')+'</button>':'<span class="secondary-cell">Current admin</span>')+'</span></div>';}).join('')):empty('No team accounts','Invite the first CleanEazy teammate.');
-  }
-  async function inviteStaff(event) {
-    event.preventDefault();if(staff.role!=='admin'){toast('Administrator access is required.','error');return;}var button=event.target.querySelector('button[type=submit]');setBusy(button,true,'Sending invite…');
-    try{var r=await client.functions.invoke('manage-staff',{body:{action:'invite',email:$('#invite-email').value.trim(),display_name:$('#invite-name').value.trim(),redirect_to:window.location.origin+window.location.pathname}});if(r.error)throw r.error;event.target.reset();toast('Team invitation sent.');await loadTeam();}
-    catch(error){fail(error,'Invitation could not be sent');}finally{setBusy(button,false);}
-  }
-  async function updateTeamMember(id,action) {
-    if(!staff||staff.role!=='admin'||id===user.id){toast('You can’t change your own administrator access here.','error');return;}
-    var member={user_id:id};if(action==='role'){var select=$('[data-team-update="role"][data-user-id="'+CSS.escape(id)+'"]');member.role=select.value;}else {var item=await client.from('staff_users').select('active').eq('user_id',id).single();if(item.error)throw item.error;member.active=!item.data.active;}
-    var r=await client.functions.invoke('manage-staff',{body:{action:'update',member:member}});if(r.error)throw r.error;toast('Team access updated.');await loadTeam();
-  }
-
-  async function loadSettings() {
-    if(!staff||staff.role!=='admin')return;var r=await client.from('business_settings').select('*').order('id').limit(1).maybeSingle();if(r.error)throw r.error;lastSettings=r.data;
-    if(!lastSettings){toast('Business settings have not been initialized.','error');return;}
-    $('#setting-business-name').value=lastSettings.business_name||'CleanEazy Laundry';$('#setting-phone').value=lastSettings.phone||'';$('#setting-whatsapp').value=lastSettings.whatsapp||'';$('#setting-email').value=lastSettings.email||'';$('#setting-gstin').value=lastSettings.gstin||'';$('#setting-currency').value=lastSettings.currency||'INR';$('#setting-address').value=lastSettings.address||'';
-  }
-  async function saveSettings() {
-    if(!staff||staff.role!=='admin')return;var button=$('#save-settings');setBusy(button,true,'Saving…');
-    try{var values={business_name:$('#setting-business-name').value.trim(),phone:$('#setting-phone').value.trim()||null,whatsapp:$('#setting-whatsapp').value.trim()||null,email:$('#setting-email').value.trim()||null,gstin:$('#setting-gstin').value.trim()||null,currency:$('#setting-currency').value.trim().toUpperCase()||'INR',address:$('#setting-address').value.trim()||null,updated_at:new Date().toISOString()};var r=await client.from('business_settings').update(values).eq('id',lastSettings.id);if(r.error)throw r.error;toast('Business details saved.');await loadSettings();}
-    catch(error){fail(error,'Business details could not be saved');}finally{setBusy(button,false);}
-  }
-
-  async function loadInvoice(id) {
-    var result=await Promise.all([client.from('orders').select('*,customer:customers(full_name,customer_code,whatsapp_number,address,area)').eq('id',id).single(),client.from('order_items').select('id,item_name,quantity,unit,rate,amount,service:services(service_name)').eq('order_id',id).order('id'),client.from('business_settings').select('business_name,phone,whatsapp,address,email,gstin,currency').order('id').limit(1).maybeSingle()]);result.forEach(function(r){if(r.error)throw r.error;});
-    var o=result[0].data,items=result[1].data||[],settings=result[2].data||{},customer=o.customer||{},balance=Math.max(Number(o.total_amount)-Number(o.paid_amount),0);
-    var lines=items.map(function(item){return '<tr><td>'+esc(item.item_name||item.service&&item.service.service_name||'Laundry service')+'</td><td>'+Number(item.quantity||0)+' '+esc(item.unit||'')+'</td><td>'+money(item.rate)+'</td><td>'+money(item.amount)+'</td></tr>';}).join('');
-    var html='<div class="invoice"><div class="invoice-top"><div class="invoice-brand">'+esc(settings.business_name||'CleanEazy Laundry')+'<small>FRESH CLOTHES. ZERO HASSLE.</small></div><div class="invoice-number"><b>INVOICE</b><span>'+esc(o.invoice_number||o.order_number)+'</span></div></div><div class="invoice-customer"><div><p>BILLED TO</p><strong>'+esc(customer.full_name||'Customer')+'</strong><br><small>'+esc(customer.customer_code||'')+' · '+esc(customer.whatsapp_number||'')+'</small><br><small>'+esc([customer.address,customer.area].filter(Boolean).join(', '))+'</small></div><div><p>ORDER</p><strong>'+esc(o.order_number)+'</strong><br><small>Order date · '+esc(displayDate(o.order_date))+'</small><br><small>Expected delivery · '+esc(displayDate(o.expected_delivery_date))+'</small></div></div><table class="invoice-table"><thead><tr><th>Service / item</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+lines+'</tbody></table><div class="invoice-totals"><div class="invoice-total-row"><span>Subtotal</span><strong>'+money(o.subtotal)+'</strong></div><div class="invoice-total-row"><span>Discount</span><strong>− '+money(o.discount)+'</strong></div><div class="invoice-total-row grand"><span>Grand total</span><strong>'+money(o.total_amount)+'</strong></div><div class="invoice-total-row"><span>Paid</span><strong>'+money(o.paid_amount)+'</strong></div><div class="invoice-total-row"><span>Outstanding</span><strong>'+money(balance)+'</strong></div><div class="invoice-total-row"><span>Payment status</span><strong>'+esc(o.payment_status)+'</strong></div></div><div class="invoice-foot">Thank you for choosing '+esc(settings.business_name||'CleanEazy Laundry')+'.<br>'+esc([settings.phone,settings.email].filter(Boolean).join(' · '))+'</div></div>';
-    openDialog('Invoice '+(o.invoice_number||o.order_number),html,'<div class="invoice-actions"><button class="button button-outline" data-close>Close</button><button class="button button-green" data-print-invoice>Print / Save PDF</button></div>');
-  }
-
-  function downloadFile(name,content,type) { var blob=new Blob([content],{type:type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(function(){URL.revokeObjectURL(url);},1500); }
-
-  document.addEventListener('DOMContentLoaded',start);
-  window.addEventListener('unhandledrejection',function(event){console.error('Unhandled application promise:',event.reason);});
+  page.addEventListener('click',async event=>{
+    const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
+    if(kind==='new-order')orderForm();else if(kind==='new-customer')customerForm();else if(kind==='new-service')serviceForm();else if(kind==='new-payment')paymentForm();else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='new-subscription')subscriptionForm();
+    else if(kind==='order-detail')orderDetail(idValue);else if(kind==='customer-detail')customerDetail(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='edit-service')serviceForm(data.services.find(s=>s.id===idValue));
+    else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));
+    else if(kind==='go-page'){event.preventDefault();setPage(action.dataset.page);}else if(kind==='backup-export')await exportBackup();else if(kind==='export-report')exportReport();else if(kind==='refresh'){if(!isDemo){try{await cloudLoad();render();toast('माहिती अद्ययावत केली.');}catch(error){toast(`माहिती अद्ययावत झाली नाही: ${error.message}`,'error');}}else render();}
+  });
+  $('#app-modal').addEventListener('click',async event=>{
+    if(event.target===modal){closeModal();return;}const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
+    if(kind==='close-modal')closeModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
+  });
+  $('#side-brand')?.addEventListener('click',()=>setPage('dashboard'));
+  $$('.side-nav [data-page]').forEach(button=>button.addEventListener('click',()=>setPage(button.dataset.page)));
+  $('#login-form').addEventListener('submit',event=>{event.preventDefault();liveLogin();});
+  $('#demo-login').addEventListener('click',()=>{isDemo=true;data=loadDemo();enterApp();toast('नमुना सराव सुरू झाला.','info');});
+  $('#logout-button').addEventListener('click',logout);
+  $('#demo-banner-close').addEventListener('click',()=>{$('#demo-banner').hidden=true;sessionStorage.setItem('cleaneazy.banner.closed','1');});
+  $('#mobile-menu').addEventListener('click',()=>{$('#sidebar').classList.toggle('open');$('#mobile-overlay').classList.toggle('open');});
+  $('#mobile-overlay').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#mobile-overlay').classList.remove('open');});
+  $('#global-search').addEventListener('keydown',event=>{if(event.key==='Enter'){const q=event.currentTarget.value;setPage('orders');renderOrders(q);}});
+  document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();$('#global-search').focus();}});
+  page.addEventListener('input',event=>{if(event.target.id==='customer-search'){const value=event.target.value;renderCustomers(value);const input=$('#customer-search');input?.focus();input?.setSelectionRange(value.length,value.length);}if(event.target.id==='order-search'){const value=event.target.value;renderOrders(value);const input=$('#order-search');input?.focus();input?.setSelectionRange(value.length,value.length);}});
+  page.addEventListener('change',event=>{if(event.target.id==='order-filter'){const current=$('#order-search')?.value||'';const selected=event.target.value;renderOrders(current);const filter=$('#order-filter');if(filter)filter.value=selected;const rows=$$('.orders-table tbody tr');rows.forEach(row=>{const pill=$('.status-pill',row);if(selected&&pill?.classList.contains(`status-${selected}`)===false)row.hidden=true;});}});
+  modal.addEventListener('change',event=>{if(event.target.id==='order-customer')updateOrderSubscriptions(event.target.value);if(event.target.id==='pay-order')updatePaymentMax();if(event.target.id==='order-subscription')localOrderTotal();if(event.target.matches('.item-service,.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
+  modal.addEventListener('input',event=>{if(event.target.matches('.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
+  $('#backup-file').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)restoreBackup(file);});
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstall=event;$('#install-button').hidden=false;});
+  $('#install-button').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('#install-button').hidden=true;});
+  (async()=>{if(await tryRestoreSession())return;})();
 })();
-

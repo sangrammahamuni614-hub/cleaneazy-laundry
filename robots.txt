@@ -1,5 +1,4 @@
 User-agent: *
-Allow: /
 Disallow: /cleaneazy-laundry/software/
+Allow: /
 Sitemap: https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/sitemap.xml
-

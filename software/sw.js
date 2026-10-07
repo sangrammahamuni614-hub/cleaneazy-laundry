@@ -1,42 +1,25 @@
-'use strict';
-const CACHE_PREFIX = 'cleaneazy-software-';
-const CACHE_NAME = CACHE_PREFIX + 'shell-v2';
-const APP_BASE = new URL('./', self.location.href).pathname;
-const SHELL = [
-  './', './app.css', './app.js', './supabase-config.js',
-  './manifest.json', './manifest.webmanifest', './icon.svg', './offline.html'
-];
-
+const CACHE = 'cleaneazy-software-v1';
+const APP_SHELL = ['./', './index.html', './offline.html', './styles.css', './app.js', './runtime-config.js', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
-
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(
-    keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key))
-  )).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('cleaneazy-software-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
-
 self.addEventListener('fetch', event => {
   const request = event.request;
-  if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith(APP_BASE)) return;
-
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/') || url.pathname.includes('/functions/v1/')) return;
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(async () => {
-      const cache = await caches.open(CACHE_NAME);
-      return await cache.match(request) || await cache.match(new URL('./offline.html', self.location.href).pathname);
-    }));
+    event.respondWith(fetch(request).then(response => {
+      if (response.ok) caches.open(CACHE).then(cache => cache.put('./index.html', response.clone()));
+      return response;
+    }).catch(() => caches.match('./index.html')));
     return;
   }
-
-  event.respondWith(caches.match(request).then(cached => {
-    const fresh = fetch(request).then(response => {
-      if (response.ok) caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
-      return response;
-    }).catch(() => cached);
-    return cached || fresh;
-  }));
+  event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
+    if (response.ok) caches.open(CACHE).then(cache => cache.put(request, response.clone()));
+    return response;
+  })));
 });
-

@@ -1,28 +1,46 @@
 # CleanEazy Laundry
 
-CleanEazy's public website and private laundry desk live in this static GitHub Pages repository. The public site is at `/`; the only management application is `/software/`.
+CleanEazy Laundry साठी सार्वजनिक मराठी वेबसाइट आणि कपडे धुलाई व्यवसाय व्यवस्थापन प्रणाली.
 
-## Production URLs
+## संकेतस्थळे
 
-- Website: <https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/>
-- Team app: <https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/>
-- Repository: <https://github.com/sangrammahamuni614-hub/cleaneazy-laundry>
+- सार्वजनिक वेबसाइट: https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/
+- व्यवस्थापन प्रणाली: https://sangrammahamuni614-hub.github.io/cleaneazy-laundry/software/
+- GitHub repository: https://github.com/sangrammahamuni614-hub/cleaneazy-laundry
 
-The Pages site publishes the `main` branch from the repository root. No custom domain is configured.
+## Windows वर सुरू करा
 
-## Business application
+1. या फोल्डरमधील `START-CLEANEAZY.bat` उघडा.
+2. व्यवस्थापन प्रणालीसाठी `/software/` पत्ता उघडा.
+3. स्थानिक सरावासाठी `नमुना सराव सुरू करा` निवडा. या सरावातील नोंदी फक्त त्या ब्राउझरमध्ये राहतात; त्या Cloud डेटाबेसमध्ये जात नाहीत.
+4. प्रत्यक्ष कामासाठी विद्यमान व्यवस्थापक खाते वापरून लॉगिन करा.
+5. सर्व्हर बंद करण्यासाठी `STOP-CLEANEAZY.bat` उघडा.
 
-The web app uses Supabase Auth, PostgreSQL with RLS, and database RPCs. The frontend contains only the project's publishable key in `software/supabase-config.js`; it does not contain a service-role key. Accounts are invitation-only. The existing first Auth user is provisioned as the CleanEazy administrator.
+या संगणकावर Node.js उपलब्ध आहे. अतिरिक्त पॅकेज स्थापना आवश्यक नाही. JavaScript तपासण्यासाठी `node --check assets/site.js`, `node --check software/app.js`, `node --check software/sw.js` आणि `node --check tools/local-server.cjs` चालवा.
 
-The `/software/` desk includes customers, services and rate history, orders, invoices, payments, sequential order status, subscriptions, reminders, reports, WhatsApp queue, backup/restore, team access and business settings. Order and payment writes use transactional, idempotent RPCs. Reminder scheduling uses the existing hourly Supabase Cron job.
+## दरपत्रक
 
-## Local preview
+| सेवा | दर |
+| --- | ---: |
+| धुलाई | ₹८० / किलो |
+| धुलाई + इस्त्री | ₹११० / किलो |
+| शर्ट / पँट | ₹४० / वस्तू |
+| ब्लँकेट | ₹८० / किलो |
+| बॅग / शूज | ₹११० / वस्तू |
+| ड्रायक्लीन साडी | ₹१६० / वस्तू |
+| इतर कपडे | ₹५० / वस्तू |
 
-Serve the repository root over HTTP, for example with `python -m http.server 8080`, then visit `http://localhost:8080/` and `http://localhost:8080/software/`. Browser sign-in needs an internet connection to reach Supabase and its JS client.
+नवीन ग्राहकाच्या पहिल्या ऑर्डरवर २५% स्वागत सवलत आपोआप लागू होते. सवलत सर्व्हरवर ऑर्डर तयार होताना मोजली जाते आणि बिलात एकूण सवलत म्हणून नोंदवली जाते.
 
-## Supabase updates
+## प्रणाली
 
-The live project ref is `jcckvihjumqdmkcbaebo`. The SQL migration files under `supabase/migrations/` record the application-access, restore, and advisor-cleanup updates applied to the connected project. Edge Function source is under `supabase/functions/`.
+- ग्राहक, सेवा, ऑर्डर, बिल, पेमेंट, सदस्य योजना, अहवाल आणि बॅकअप व्यवस्थापन.
+- प्रत्यक्ष नोंदी Supabase Auth आणि RLS ने सुरक्षित केलेल्या Supabase PostgreSQL मध्ये साठतात.
+- WhatsApp Cloud API संदेश, webhook आणि तासागणिक reminder queue जोडलेले आहेत. Meta access token, phone number ID, verify token आणि मंजूर message templates सेट केल्यावरच संदेश प्रत्यक्ष पाठवता येतील.
+- `/software/` शोधयंत्रांपासून लपवला आहे. सार्वजनिक वेबसाइट आणि व्यवस्थापन प्रणालीचे एकच निश्चित पत्ते आहेत.
 
-Never commit Supabase secret/service-role keys, Meta access tokens, webhook secrets, or private customer exports. See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for external setup and remaining credentials.
+## सुरक्षेची काळजी
 
+`software/runtime-config.js` मधील Supabase publishable key ही browser मध्ये वापरण्यासाठीची सार्वजनिक key आहे. Service role key, WhatsApp token, ग्राहक export किंवा इतर गुपिते repository मध्ये ठेवू नका. बॅकअपमध्ये वैयक्तिक ग्राहक माहिती असू शकते; तो सुरक्षित ठिकाणी जतन करा.
+
+सुरुवात, Supabase, WhatsApp आणि बाकीचे आवश्यक खाते-सेटअप [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) मध्ये दिले आहेत.

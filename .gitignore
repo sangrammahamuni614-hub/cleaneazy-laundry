@@ -1,0 +1,10 @@
+# Local-only files and credentials
+.env
+.env.*
+!.env.example
+supabase/functions/.env
+supabase/.temp/
+work/.cleaneazy-server.json
+node_modules/
+.DS_Store
+Thumbs.db

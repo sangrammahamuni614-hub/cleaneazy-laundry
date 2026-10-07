@@ -1,16 +1,15 @@
 {
   "id": "./",
-  "name": "CleanEazy Laundry Manager",
+  "name": "CleanEazy लॉन्ड्री व्यवस्थापन",
   "short_name": "CleanEazy",
-  "description": "Private cloud laundry management for the CleanEazy team.",
+  "description": "CleanEazy Laundry — मराठी लॉन्ड्री व्यवस्थापन",
+  "lang": "mr-IN",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "theme_color": "#153d3b",
-  "background_color": "#f5f7f2",
+  "background_color": "#f7f7f2",
+  "theme_color": "#183f37",
   "icons": [
     { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
-

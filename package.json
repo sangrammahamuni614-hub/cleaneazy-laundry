@@ -1,0 +1,9 @@
+{
+  "name": "CleanEazy Laundry",
+  "private": true,
+  "description": "मराठी लॉन्ड्री वेबसाइट आणि व्यवस्थापन प्रणाली",
+  "scripts": {
+    "serve": "node tools/local-server.cjs",
+    "check:javascript": "node --check assets/site.js && node --check software/app.js && node --check tools/local-server.cjs"
+  }
+}

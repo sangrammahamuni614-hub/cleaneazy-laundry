@@ -1,11 +1,17 @@
-project_id = "jcckvihjumqdmkcbaebo"
+[project_id]
+cleaneazy-laundry = "jcckvihjumqdmkcbaebo"
 
-[functions."send-whatsapp"]
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[functions.send-whatsapp]
 verify_jwt = false
 
-[functions."whatsapp-webhook"]
+[functions.whatsapp-webhook]
 verify_jwt = false
 
-[functions."manage-staff"]
+[functions.manage-staff]
 verify_jwt = true
-
