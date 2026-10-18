@@ -32,6 +32,7 @@
   const currentWeekStart = () => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()+6)%7)); return dateInput(d); };
   const currentMonthStart = () => `${today().slice(0,7)}-01`;
   let isDemo = true, data, currentPage = 'dashboard', session = null, toastTimer, deferredInstall = null;
+  const pageHistory = [];
   const page = $('#page-content');
   const modal = $('#app-modal');
 
@@ -50,7 +51,9 @@
       {id:'srv-04',name:'ब्लँकेट',unit:'kg',rate:80,category:'घरगुती वस्तू',description:'ब्लँकेट धुलाई',active:true},
       {id:'srv-05',name:'बॅग / शूज',unit:'piece',rate:110,category:'विशेष निगा',description:'प्रति वस्तू स्वच्छता',active:true},
       {id:'srv-06',name:'ड्रायक्लीन साडी',unit:'piece',rate:160,category:'ड्रायक्लीनिंग',description:'विशेष निगेसह ड्रायक्लीनिंग',active:true},
-      {id:'srv-07',name:'इतर कपडे',unit:'piece',rate:50,category:'कपडे',description:'प्रति वस्तू सेवा',active:true}
+      {id:'srv-07',name:'इतर कपडे',unit:'piece',rate:50,category:'कपडे',description:'प्रति वस्तू सेवा',active:true},
+      {id:'srv-08',name:'फक्त इस्त्री — सामान्य कपडे',unit:'piece',rate:10,category:'फक्त इस्त्री',description:'प्रति कपडा स्वतंत्र इस्त्री दर',active:true},
+      {id:'srv-09',name:'फक्त इस्त्री — साडी',unit:'piece',rate:60,category:'फक्त इस्त्री',description:'प्रति साडी स्वतंत्र इस्त्री दर',active:true}
     ];
     const order = (n,cust,status,dayOffset,total,paid,service,qty,unit,rate,discount=0) => ({id:`ord-${n}`,number:`CE-२०२६-${String(n).padStart(4,'0')}`,invoice:`INV-२०२६-${String(n).padStart(4,'0')}`,customerId:cust,placedAt:addDays(day,dayOffset),deliveryAt:addDays(day,Math.max(dayOffset,0)+2),status,subtotal:total+discount,discount,total,paid,outstanding:total-paid,paymentStatus:paid<=0?'unpaid':paid>=total?'paid':'partial',notes:'',items:[{serviceId:service,name:services.find(s=>s.id===service).name,item:'कपडे',qty,unit,rate,amount:total+discount}]});
     const orders = [order(128,'cust-01','processing',0,704,300,'srv-02',6.4,'kg',110),order(127,'cust-02','ready',-1,320,320,'srv-06',2,'piece',160),order(126,'cust-03','out_for_delivery',0,800,0,'srv-01',10,'kg',80),order(125,'cust-04','delivered',-3,320,320,'srv-04',4,'kg',80),order(124,'cust-01','washing',-2,400,0,'srv-03',10,'piece',40),order(123,'cust-02','pickup_requested',-1,440,0,'srv-02',4,'kg',110)];
@@ -75,8 +78,10 @@
     if(!modal.open) modal.showModal();
   }
   function closeModal() { if(modal.open) modal.close(); }
-  function setPage(next) {
-    if(!PAGE_NAMES[next]) return; currentPage=next;
+  function setPage(next, options={}) {
+    if(!PAGE_NAMES[next]) return;
+    if(next!==currentPage && options.fromHistory!==true) pageHistory.push(currentPage);
+    currentPage=next;
     $$('.side-nav [data-page]').forEach(button=>button.classList.toggle('active',button.dataset.page===next));
     $('#page-crumb').textContent=PAGE_NAMES[next];
     $('#sidebar').classList.remove('open'); $('#mobile-overlay').classList.remove('open');
@@ -87,6 +92,9 @@
     const renderer={dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,services:renderServices,payments:renderPayments,subscriptions:renderSubscriptions,reports:renderReports,whatsapp:renderWhatsApp,backup:renderBackup}[currentPage];
     if(renderer) renderer();
     $('#order-nav-count').textContent=num(data.orders.filter(order=>order.status!=='delivered').length);
+    $('.app-navigation').forEach(node=>node.remove());
+    if(currentPage!=='dashboard') page.insertAdjacentHTML('afterbegin',`<nav class="app-navigation" aria-label="पान नेव्हिगेशन"><button type="button" data-action="nav-back" class="nav-back">← मागे</button><strong>CleanEazy Laundry</strong><button type="button" data-action="nav-home" class="nav-home">⌂ मुख्यपान</button></nav>`);
+    page.insertAdjacentHTML('beforeend',`<nav class="mobile-bottom-nav app-navigation" aria-label="मोबाइल मुख्य मेनू"><button type="button" data-action="bottom-page" data-page="dashboard" class="${currentPage==='dashboard'?'active':''}">⌂<span>मुख्यपान</span></button><button type="button" data-action="bottom-page" data-page="orders" class="${currentPage==='orders'?'active':''}">▤<span>ऑर्डर्स</span></button><button type="button" data-action="bottom-page" data-page="customers" class="${currentPage==='customers'?'active':''}">♙<span>ग्राहक</span></button><button type="button" data-action="bottom-page" data-page="reports" class="${currentPage==='reports'?'active':''}">▥<span>अहवाल</span></button><button type="button" data-action="bottom-page" data-page="backup" class="${currentPage==='backup'?'active':''}">⋯<span>अधिक</span></button></nav>`);
   }
   function customer(idValue) { return data.customers.find(item=>item.id===idValue); }
   function order(idValue) { return data.orders.find(item=>item.id===idValue); }
@@ -348,7 +356,10 @@
   }
   page.addEventListener('click',async event=>{
     const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
-    if(kind==='new-order')orderForm();else if(kind==='new-customer')customerForm();else if(kind==='new-service')serviceForm();else if(kind==='new-payment')paymentForm();else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='new-subscription')subscriptionForm();
+    if(kind==='nav-back'){if(modal.open){closeModal();return;}const previous=pageHistory.pop();if(previous)setPage(previous,{fromHistory:true});else if(currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});else toast('तुम्ही मुख्यपानावर आहात.','info');return;}
+    else if(kind==='nav-home'){if(modal.open){toast('आधी उघडलेला फॉर्म सेव्ह करा किंवा रद्द करा.','info');return;}setPage('dashboard');return;}
+    else if(kind==='bottom-page'){setPage(action.dataset.page);return;}
+    else if(kind==='new-order')orderForm();else if(kind==='new-customer')customerForm();else if(kind==='new-service')serviceForm();else if(kind==='new-payment')paymentForm();else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='new-subscription')subscriptionForm();
     else if(kind==='order-detail')orderDetail(idValue);else if(kind==='customer-detail')customerDetail(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='edit-service')serviceForm(data.services.find(s=>s.id===idValue));
     else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));
     else if(kind==='go-page'){event.preventDefault();setPage(action.dataset.page);}else if(kind==='backup-export')await exportBackup();else if(kind==='export-report')exportReport();else if(kind==='refresh'){if(!isDemo){try{await cloudLoad();render();toast('माहिती अद्ययावत केली.');}catch(error){toast(`माहिती अद्ययावत झाली नाही: ${error.message}`,'error');}}else render();}
