@@ -62,7 +62,7 @@
     return {customers,services,orders,payments,subscriptions,messages:[{id:'msg-01',event:'ऑर्डर तयार',recipient:'919876540001',status:'queued',attempts:0,createdAt:new Date().toISOString(),providerId:'',error:''}],settings:{businessName:'CleanEazy Laundry',location:'पुणे, महाराष्ट्र',currency:'INR'},rateHistory:[]};
   }
   function loadDemo() {
-    try { const saved=JSON.parse(localStorage.getItem(KEYS.data)||'null'); if(saved && Array.isArray(saved.customers) && Array.isArray(saved.orders)) return saved; } catch(_) {}
+    try { const saved=JSON.parse(localStorage.getItem(KEYS.data)||'null'); if(saved && Array.isArray(saved.customers) && Array.isArray(saved.orders)) { saved.services=Array.isArray(saved.services)?saved.services:[]; const ironingDefaults=[{id:'srv-08',name:'फक्त इस्त्री — सामान्य कपडे',unit:'piece',rate:10,category:'फक्त इस्त्री',description:'प्रति कपडा स्वतंत्र इस्त्री दर',active:true},{id:'srv-09',name:'फक्त इस्त्री — साडी',unit:'piece',rate:60,category:'फक्त इस्त्री',description:'प्रति साडी स्वतंत्र इस्त्री दर',active:true}]; ironingDefaults.forEach(service=>{if(!saved.services.some(item=>item.id===service.id||item.name===service.name))saved.services.push(service);}); localStorage.setItem(KEYS.data,JSON.stringify(saved)); return saved; } } catch(_) {}
     const starter=freshDemo(); localStorage.setItem(KEYS.data,JSON.stringify(starter)); return starter;
   }
   function persist() { if(isDemo) localStorage.setItem(KEYS.data,JSON.stringify(data)); }
