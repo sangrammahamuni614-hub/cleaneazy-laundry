@@ -257,13 +257,13 @@
   }
   function enterApp() {
     $('#login-screen').hidden=true;$('#app-shell').hidden=false;
-    $('#user-name').textContent=isDemo?'नमुना व्यवस्थापक':(session?.user?.email||'व्यवस्थापक');$('#user-role').textContent=isDemo?'डेमो वापरकर्ता':'प्रमाणित कर्मचारी';
+    $('#user-name').textContent=isDemo?'नमुना व्यवस्थापक':((session?.user?.email||'').toLowerCase()==='sangrammahamuni614@gmail.com'?'Clean easy':(session?.user?.user_metadata?.full_name||session?.user?.email||'व्यवस्थापक'));$('#user-role').textContent=isDemo?'डेमो वापरकर्ता':'प्रमाणित कर्मचारी';
     $('#connection-title').textContent=isDemo?'नमुना सराव':'Supabase cloud';$('#connection-copy').textContent=isDemo?'स्थानिक डेटा':'सुरक्षित सत्र';$('#demo-banner').hidden=!isDemo||sessionStorage.getItem('cleaneazy.banner.closed')==='1';render();
     if(new URLSearchParams(location.search).get('new')==='1'){history.replaceState({},'',location.pathname);setTimeout(orderForm,50);}
     if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
   }
   async function liveLogin() {
-    const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!hasCloud){showLoginError('Supabase जोडलेले नाही. प्रत्यक्ष लॉगिनसाठी प्रकल्प URL आणि anon key कॉन्फिगर करणे आवश्यक आहे; नमुना सराव सुरू करा.');return;}
+    const loginValue=$('#login-email').value.trim(),email=/^clean\s*easy$/i.test(loginValue)?'sangrammahamuni614@gmail.com':loginValue,password=$('#login-password').value;if(!hasCloud){showLoginError('Supabase जोडलेले नाही. प्रत्यक्ष लॉगिनसाठी प्रकल्प URL आणि anon key कॉन्फिगर करणे आवश्यक आहे; नमुना सराव सुरू करा.');return;}
     try{await cloudLogin(email,password);isDemo=false;await cloudLoad();enterApp();toast('लॉगिन यशस्वी.');}catch(error){showLoginError(error.message==='Invalid login credentials'?'ई-मेल किंवा पासवर्ड चुकीचा आहे.':`लॉगिन अयशस्वी: ${error.message}`);}
   }
   async function tryRestoreSession() {
