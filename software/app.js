@@ -337,7 +337,7 @@
     popup.document.open();popup.document.write(invoiceHtml(o));popup.document.close();
   }
   function shareInvoice(o) {
-    const html=invoiceHtml(o),filename=String(o.invoice||o.number||'CleanEazy-Invoice').replace(/[^A-Za-z0-9._-]/g,'_');
+    const html=invoiceHtml(o).replace(/ onclick="window\\.print\\(\\)"/g,''),filename=String(o.invoice||o.number||'CleanEazy-Invoice').replace(/[^A-Za-z0-9._-]/g,'_');
     if(window.CleanEazyNative&&typeof window.CleanEazyNative.shareInvoiceHtml==='function'){
       try{window.CleanEazyNative.shareInvoiceHtml(html,filename);toast('PDF तयार करून शेअर करण्यासाठी उघडत आहे.','info');}
       catch(_){toast('PDF शेअर करता आला नाही. बिल उघडून प्रिंट / PDF पर्याय वापरा.','error');}
@@ -383,7 +383,7 @@
   });
   $('#app-modal').addEventListener('click',async event=>{
     if(event.target===modal){closeModal();return;}const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
-    if(kind==='close-modal')closeModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
+    if(kind==='close-modal')closeModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='share-invoice')shareInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
   });
   $('#side-brand')?.addEventListener('click',()=>setPage('dashboard'));
   $$('.side-nav [data-page]').forEach(button=>button.addEventListener('click',()=>setPage(button.dataset.page)));
