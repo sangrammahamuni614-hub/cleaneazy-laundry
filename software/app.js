@@ -337,7 +337,7 @@
     popup.document.open();popup.document.write(invoiceHtml(o));popup.document.close();
   }
   function shareInvoice(o) {
-    const html=invoiceHtml(o).replace(/ onclick="window\\.print\\(\\)"/g,''),filename=String(o.invoice||o.number||'CleanEazy-Invoice').replace(/[^A-Za-z0-9._-]/g,'_');
+    const html=invoiceHtml(o).replace(' onclick="window.print()"', ''),filename=String(o.invoice||o.number||'CleanEazy-Invoice').replace(/[^A-Za-z0-9._-]/g,'_');
     if(window.CleanEazyNative&&typeof window.CleanEazyNative.shareInvoiceHtml==='function'){
       try{window.CleanEazyNative.shareInvoiceHtml(html,filename);toast('PDF तयार करून शेअर करण्यासाठी उघडत आहे.','info');}
       catch(_){toast('PDF शेअर करता आला नाही. बिल उघडून प्रिंट / PDF पर्याय वापरा.','error');}
