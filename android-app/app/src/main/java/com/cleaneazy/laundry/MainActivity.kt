@@ -6,14 +6,11 @@ import android.content.Intent
 import android.graphics.Color
 import android.content.ClipData
 import android.os.CancellationSignal
-import android.os.Bundle as AndroidBundle
 import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
 import android.print.PageRange
 import android.os.ParcelFileDescriptor
 import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.IOException
@@ -194,7 +191,7 @@ class MainActivity : Activity() {
                                 showShareError("पावतीचे PDF तयार करता आले नाही.")
                                 view.destroy()
                             }
-                        }, AndroidBundle())
+                        }, Bundle())
                 } catch (_: Exception) {
                     showShareError("PDF तयार करता आला नाही. कृपया पुन्हा प्रयत्न करा.")
                     view.destroy()
