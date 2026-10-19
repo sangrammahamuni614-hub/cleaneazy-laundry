@@ -4,6 +4,16 @@ import android.app.Activity
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
+import android.content.ClipData
+import android.os.CancellationSignal
+import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
+import android.print.PageRange
+import android.os.ParcelFileDescriptor
+import android.webkit.JavascriptInterface
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.IOException
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -58,6 +68,7 @@ class MainActivity : Activity() {
             }
         }
         webView.webChromeClient = WebChromeClient()
+        webView.addJavascriptInterface(InvoiceShareBridge(), "CleanEazyNative")
 
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
         progress.isIndeterminate = false
@@ -98,6 +109,100 @@ class MainActivity : Activity() {
         } else {
             webView.loadUrl(APP_URL)
         }
+    }
+
+    private inner class InvoiceShareBridge {
+        @JavascriptInterface
+        fun shareInvoiceHtml(html: String, requestedName: String) {
+            // Only accept a bounded, script-free invoice document from the app's hosted UI.
+            if (html.length !in 1..1_000_000 ||
+                !html.contains("<html", ignoreCase = true) ||
+                Regex("<script|javascript:|on[a-z]+\\s*=", RegexOption.IGNORE_CASE).containsMatchIn(html) ||
+                Regex("(src|href)\\s*=\\s*['\"]https?://", RegexOption.IGNORE_CASE).containsMatchIn(html)
+            ) {
+                runOnUiThread { showShareError("पावती तयार करता आली नाही. पुन्हा प्रयत्न करा.") }
+                return
+            }
+            val safeName = requestedName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                .take(80).ifBlank { "CleanEazy-Invoice" }
+            runOnUiThread { renderAndSharePdf(html, safeName) }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun renderAndSharePdf(invoiceHtml: String, filename: String) {
+        val pdfWebView = WebView(this)
+        pdfWebView.settings.javaScriptEnabled = false
+        pdfWebView.settings.allowFileAccess = false
+        pdfWebView.settings.allowContentAccess = false
+        pdfWebView.setBackgroundColor(Color.WHITE)
+        pdfWebView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+            override fun onPageFinished(view: WebView, url: String) {
+                try {
+                    val directory = File(cacheDir, "shared-invoices")
+                    if (!directory.exists() && !directory.mkdirs()) throw IOException("cache directory")
+                    val pdf = File(directory, "$filename.pdf")
+                    val descriptor = ParcelFileDescriptor.open(
+                        pdf,
+                        ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_READ_WRITE
+                    )
+                    val adapter = view.createPrintDocumentAdapter(filename)
+                    val attributes = PrintAttributes.Builder()
+                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                        .setResolution(PrintAttributes.Resolution("cleaneazy", "CleanEazy", 300, 300))
+                        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                        .build()
+                    adapter.onLayout(null, attributes, CancellationSignal(),
+                        object : PrintDocumentAdapter.LayoutResultCallback() {
+                            override fun onLayoutFinished(info: PrintDocumentAdapter.DocumentInfo, changed: Boolean) {
+                                adapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(),
+                                    object : PrintDocumentAdapter.WriteResultCallback() {
+                                        override fun onWriteFinished(pages: Array<PageRange>) {
+                                            try {
+                                                descriptor.close()
+                                                val uri = FileProvider.getUriForFile(
+                                                    this@MainActivity,
+                                                    "$packageName.fileprovider",
+                                                    pdf
+                                                )
+                                                val share = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "application/pdf"
+                                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                                    clipData = ClipData.newUri(contentResolver, "CleanEazy PDF", uri)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                startActivity(Intent.createChooser(share, "पावती शेअर करा"))
+                                            } catch (_: Exception) {
+                                                showShareError("PDF शेअर करता आला नाही. पुन्हा प्रयत्न करा.")
+                                            } finally {
+                                                view.destroy()
+                                            }
+                                        }
+                                        override fun onWriteFailed(error: CharSequence?) {
+                                            try { descriptor.close() } catch (_: Exception) {}
+                                            showShareError("PDF तयार झाला नाही. प्रिंट पर्याय वापरून पाहा.")
+                                            view.destroy()
+                                        }
+                                    })
+                            }
+                            override fun onLayoutFailed(error: CharSequence?) {
+                                try { descriptor.close() } catch (_: Exception) {}
+                                showShareError("पावतीचे PDF तयार करता आले नाही.")
+                                view.destroy()
+                            }
+                        }, Bundle())
+                } catch (_: Exception) {
+                    showShareError("PDF तयार करता आला नाही. कृपया पुन्हा प्रयत्न करा.")
+                    view.destroy()
+                }
+            }
+        }
+        pdfWebView.loadDataWithBaseURL(null, invoiceHtml, "text/html", "UTF-8", null)
+    }
+
+    private fun showShareError(message: String) {
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun dp(value: Int): Int =
