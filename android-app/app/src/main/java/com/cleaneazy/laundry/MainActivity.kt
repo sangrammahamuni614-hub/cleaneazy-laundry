@@ -5,10 +5,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.content.ClipData
-import android.os.CancellationSignal
-import android.print.PrintAttributes
-import android.print.PrintDocumentAdapter
-import android.print.PageRange
 import android.os.ParcelFileDescriptor
 import android.webkit.JavascriptInterface
 import androidx.core.content.FileProvider
@@ -142,59 +138,47 @@ class MainActivity : Activity() {
                 try {
                     val directory = File(cacheDir, "shared-invoices")
                     if (!directory.exists() && !directory.mkdirs()) throw IOException("cache directory")
-                    val pdf = File(directory, "$filename.pdf")
-                    val descriptor = ParcelFileDescriptor.open(
-                        pdf,
-                        ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_READ_WRITE
+                    val pdfFile = File(directory, "$filename.pdf")
+                    val density = resources.displayMetrics.density
+                    val widthPx = (595f * density).toInt().coerceAtLeast(1)
+                    pdfWebView.measure(
+                        View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
                     )
-                    val adapter = view.createPrintDocumentAdapter(filename)
-                    val attributes = PrintAttributes.Builder()
-                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-                        .setResolution(PrintAttributes.Resolution("cleaneazy", "CleanEazy", 300, 300))
-                        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-                        .build()
-                    adapter.onLayout(null, attributes, CancellationSignal(),
-                        object : PrintDocumentAdapter.LayoutResultCallback() {
-                            override fun onLayoutFinished(info: PrintDocumentAdapter.DocumentInfo, changed: Boolean) {
-                                adapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(),
-                                    object : PrintDocumentAdapter.WriteResultCallback() {
-                                        override fun onWriteFinished(pages: Array<PageRange>) {
-                                            try {
-                                                descriptor.close()
-                                                val uri = FileProvider.getUriForFile(
-                                                    this@MainActivity,
-                                                    "$packageName.fileprovider",
-                                                    pdf
-                                                )
-                                                val share = Intent(Intent.ACTION_SEND).apply {
-                                                    type = "application/pdf"
-                                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                                    clipData = ClipData.newUri(contentResolver, "CleanEazy PDF", uri)
-                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                                startActivity(Intent.createChooser(share, "पावती शेअर करा"))
-                                            } catch (_: Exception) {
-                                                showShareError("PDF शेअर करता आला नाही. पुन्हा प्रयत्न करा.")
-                                            } finally {
-                                                view.destroy()
-                                            }
-                                        }
-                                        override fun onWriteFailed(error: CharSequence?) {
-                                            try { descriptor.close() } catch (_: Exception) {}
-                                            showShareError("PDF तयार झाला नाही. प्रिंट पर्याय वापरून पाहा.")
-                                            view.destroy()
-                                        }
-                                    })
-                            }
-                            override fun onLayoutFailed(error: CharSequence?) {
-                                try { descriptor.close() } catch (_: Exception) {}
-                                showShareError("पावतीचे PDF तयार करता आले नाही.")
-                                view.destroy()
-                            }
-                        }, Bundle())
+                    val contentHeightPx = (pdfWebView.measuredHeight).coerceAtLeast((842f * density).toInt())
+                    pdfWebView.layout(0, 0, widthPx, contentHeightPx)
+                    val pdf = android.graphics.pdf.PdfDocument()
+                    val scale = 595f / widthPx.toFloat()
+                    val pageHeightPx = (842f / scale).toInt().coerceAtLeast(1)
+                    val pageCount = ((contentHeightPx + pageHeightPx - 1) / pageHeightPx).coerceAtLeast(1)
+                    for (pageNumber in 0 until pageCount) {
+                        val info = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, pageNumber + 1).create()
+                        val page = pdf.startPage(info)
+                        page.canvas.save()
+                        page.canvas.scale(scale, scale)
+                        page.canvas.translate(0f, -(pageNumber * pageHeightPx).toFloat())
+                        pdfWebView.draw(page.canvas)
+                        page.canvas.restore()
+                        pdf.finishPage(page)
+                    }
+                    pdfFile.outputStream().use { output -> pdf.writeTo(output) }
+                    pdf.close()
+                    val uri = FileProvider.getUriForFile(
+                        this@MainActivity,
+                        "$packageName.fileprovider",
+                        pdfFile
+                    )
+                    val share = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        clipData = ClipData.newUri(contentResolver, "CleanEazy PDF", uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(share, "पावती शेअर करा"))
                 } catch (_: Exception) {
                     showShareError("PDF तयार करता आला नाही. कृपया पुन्हा प्रयत्न करा.")
-                    view.destroy()
+                } finally {
+                    pdfWebView.destroy()
                 }
             }
         }
