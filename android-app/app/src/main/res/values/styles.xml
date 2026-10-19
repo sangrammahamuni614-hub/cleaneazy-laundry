@@ -7,5 +7,7 @@
         <item name="android:navigationBarColor">#101417</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowSplashScreenBackground">#183F37</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_cleaneazy</item>
     </style>
 </resources>
