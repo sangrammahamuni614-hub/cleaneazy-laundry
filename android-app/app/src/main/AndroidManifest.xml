@@ -8,8 +8,8 @@
         android:usesCleartextTraffic="false"
         android:label="CleanEazy Laundry"
         android:theme="@style/AppTheme"
-        android:icon="@android:drawable/sym_def_app_icon"
-        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:icon="@drawable/ic_cleaneazy"
+        android:roundIcon="@drawable/ic_cleaneazy"
         android:supportsRtl="true">
         <provider
             android:name="androidx.core.content.FileProvider"
