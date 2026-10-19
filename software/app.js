@@ -80,7 +80,7 @@
   function closeModal() { if(modal.open) modal.close(); }
   function setPage(next, options={}) {
     if(!PAGE_NAMES[next]) return;
-    if(next!==currentPage && options.fromHistory!==true) pageHistory.push(currentPage);
+    if(next!==currentPage && options.fromHistory!==true) { pageHistory.push(currentPage); history.pushState({cleaneazyPage:next},'',`#${next}`); }
     currentPage=next;
     $$('.side-nav [data-page]').forEach(button=>button.classList.toggle('active',button.dataset.page===next));
     $('#page-crumb').textContent=PAGE_NAMES[next];
@@ -285,7 +285,7 @@
   function enterApp() {
     $('#login-screen').hidden=true;$('#app-shell').hidden=false;
     $('#user-name').textContent=isDemo?'नमुना व्यवस्थापक':((session?.user?.email||'').toLowerCase()==='sangrammahamuni614@gmail.com'?'Clean easy':(session?.user?.user_metadata?.full_name||session?.user?.email||'व्यवस्थापक'));$('#user-role').textContent=isDemo?'डेमो वापरकर्ता':'प्रमाणित कर्मचारी';
-    $('#connection-title').textContent=isDemo?'नमुना सराव':'Supabase cloud';$('#connection-copy').textContent=isDemo?'स्थानिक डेटा':'सुरक्षित सत्र';$('#demo-banner').hidden=!isDemo||sessionStorage.getItem('cleaneazy.banner.closed')==='1';render();
+    $('#connection-title').textContent=isDemo?'नमुना सराव':'Supabase cloud';$('#connection-copy').textContent=isDemo?'स्थानिक डेटा':'सुरक्षित सत्र';$('#demo-banner').hidden=!isDemo||sessionStorage.getItem('cleaneazy.banner.closed')==='1';if(!history.state?.cleaneazyPage)history.replaceState({cleaneazyPage:currentPage},'',location.href);render();
     if(new URLSearchParams(location.search).get('new')==='1'){history.replaceState({},'',location.pathname);setTimeout(orderForm,50);}
     if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
   }
@@ -392,7 +392,7 @@
   }
   page.addEventListener('click',async event=>{
     const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
-    if(kind==='nav-back'){if(modal.open){closeModal();return;}const previous=pageHistory.pop();if(previous)setPage(previous,{fromHistory:true});else if(currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});else toast('तुम्ही मुख्यपानावर आहात.','info');return;}
+    if(kind==='nav-back'){if(modal.open){closeModal();return;}if(history.state?.cleaneazyPage&&history.state.cleaneazyPage!==currentPage){history.back();return;}const previous=pageHistory.pop();if(previous)setPage(previous,{fromHistory:true});else if(currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});else toast('तुम्ही मुख्यपानावर आहात.','info');return;}
     else if(kind==='nav-home'){if(modal.open){toast('आधी उघडलेला फॉर्म सेव्ह करा किंवा रद्द करा.','info');return;}setPage('dashboard');return;}
     else if(kind==='bottom-page'){setPage(action.dataset.page);return;}
     else if(kind==='new-order')orderForm();else if(kind==='new-expense')expenseForm();else if(kind==='new-customer')customerForm();else if(kind==='new-service')serviceForm();else if(kind==='new-payment')paymentForm();else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='new-subscription')subscriptionForm();
@@ -404,6 +404,7 @@
     if(event.target===modal){closeModal();return;}const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
     if(kind==='close-modal')closeModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-expense')await saveExpense();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='share-invoice')shareInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
   });
+  window.addEventListener('popstate',event=>{const target=event.state?.cleaneazyPage;if(target&&PAGE_NAMES[target]){if(pageHistory.length)pageHistory.pop();setPage(target,{fromHistory:true});}else if(data&&currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});});
   $('#side-brand')?.addEventListener('click',()=>setPage('dashboard'));
   $$('.side-nav [data-page]').forEach(button=>button.addEventListener('click',()=>setPage(button.dataset.page)));
   $('#login-form').addEventListener('submit',event=>{event.preventDefault();liveLogin();});
