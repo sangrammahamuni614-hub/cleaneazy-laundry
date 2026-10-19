@@ -33,6 +33,7 @@
   const currentMonthStart = () => `${today().slice(0,7)}-01`;
   let isDemo = true, data, currentPage = 'dashboard', session = null, toastTimer, deferredInstall = null;
   const pageHistory = [];
+  let modalDirty = false;
   const page = $('#page-content');
   const modal = $('#app-modal');
 
@@ -74,10 +75,15 @@
     let node=$('#login-error'); if(!node){node=document.createElement('div');node.id='login-error';node.className='form-error';$('#login-form').prepend(node);} node.textContent=message;
   }
   function openModal(title, body, kicker='माहिती') {
+    modalDirty=false;
     $('#modal-title').textContent=title; $('#modal-kicker').textContent=kicker; $('#modal-body').innerHTML=body;
     if(!modal.open) modal.showModal();
   }
-  function closeModal() { if(modal.open) modal.close(); }
+  function closeModal() { if(modal.open) modal.close(); modalDirty=false; }
+  function requestCloseModal() {
+    if(modalDirty&&!window.confirm('तुमची माहिती अजून सेव्ह झालेली नाही. बाहेर जायचे आहे?')) return;
+    closeModal();
+  }
   function setPage(next, options={}) {
     if(!PAGE_NAMES[next]) return;
     if(next!==currentPage && options.fromHistory!==true) { pageHistory.push(currentPage); history.pushState({cleaneazyPage:next},'',`#${next}`); }
@@ -394,7 +400,7 @@
   }
   page.addEventListener('click',async event=>{
     const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
-    if(kind==='nav-back'){if(modal.open){closeModal();return;}if(history.state?.cleaneazyPage&&history.state.cleaneazyPage!==currentPage){history.back();return;}const previous=pageHistory.pop();if(previous)setPage(previous,{fromHistory:true});else if(currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});else toast('तुम्ही मुख्यपानावर आहात.','info');return;}
+    if(kind==='nav-back'){if(modal.open){requestCloseModal();return;}if(history.state?.cleaneazyPage&&history.state.cleaneazyPage!==currentPage){history.back();return;}const previous=pageHistory.pop();if(previous)setPage(previous,{fromHistory:true});else if(currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});else toast('तुम्ही मुख्यपानावर आहात.','info');return;}
     else if(kind==='nav-home'){if(modal.open){toast('आधी उघडलेला फॉर्म सेव्ह करा किंवा रद्द करा.','info');return;}setPage('dashboard');return;}
     else if(kind==='bottom-page'){setPage(action.dataset.page);return;}
     else if(kind==='new-order')orderForm();else if(kind==='new-expense')expenseForm();else if(kind==='new-customer')customerForm();else if(kind==='new-service')serviceForm();else if(kind==='new-payment')paymentForm();else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='new-subscription')subscriptionForm();
@@ -403,8 +409,8 @@
     else if(kind==='go-page'){event.preventDefault();setPage(action.dataset.page);}else if(kind==='backup-export')await exportBackup();else if(kind==='export-report')exportReport();else if(kind==='refresh'){if(!isDemo){try{await cloudLoad();render();toast('माहिती अद्ययावत केली.');}catch(error){toast(`माहिती अद्ययावत झाली नाही: ${error.message}`,'error');}}else render();}
   });
   $('#app-modal').addEventListener('click',async event=>{
-    if(event.target===modal){closeModal();return;}const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
-    if(kind==='close-modal')closeModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-expense')await saveExpense();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='share-invoice')shareInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
+    if(event.target===modal){requestCloseModal();return;}if(event.target.closest('.modal-close')){event.preventDefault();requestCloseModal();return;}const action=event.target.closest('[data-action]');if(!action)return;const kind=action.dataset.action,idValue=action.dataset.id;
+    if(kind==='close-modal')requestCloseModal();else if(kind==='save-customer')await saveCustomer(idValue||null);else if(kind==='save-service')await saveService(idValue||null);else if(kind==='save-order')await saveOrder();else if(kind==='save-payment')await savePayment();else if(kind==='save-expense')await saveExpense();else if(kind==='save-subscription')await saveSubscription();else if(kind==='advance-order')await advanceOrder(idValue);else if(kind==='invoice')printableInvoice(order(idValue));else if(kind==='share-invoice')shareInvoice(order(idValue));else if(kind==='add-order-payment')paymentForm(idValue);else if(kind==='edit-customer')customerForm(customer(idValue));else if(kind==='add-item'){addOrderItemRow();localOrderTotal();}else if(kind==='remove-item'){const rows=$$('.order-item-row');if(rows.length>1)action.closest('.order-item-row').remove();localOrderTotal();}
   });
   window.addEventListener('popstate',event=>{const target=event.state?.cleaneazyPage;if(target&&PAGE_NAMES[target]){if(pageHistory.length)pageHistory.pop();setPage(target,{fromHistory:true});}else if(data&&currentPage!=='dashboard')setPage('dashboard',{fromHistory:true});});
   $('#side-brand')?.addEventListener('click',()=>setPage('dashboard'));
@@ -420,7 +426,9 @@
   page.addEventListener('input',event=>{if(event.target.id==='customer-search'){const value=event.target.value;renderCustomers(value);const input=$('#customer-search');input?.focus();input?.setSelectionRange(value.length,value.length);}if(event.target.id==='order-search'){const value=event.target.value;renderOrders(value);const input=$('#order-search');input?.focus();input?.setSelectionRange(value.length,value.length);}});
   page.addEventListener('change',event=>{if(event.target.id==='order-filter'){const current=$('#order-search')?.value||'';const selected=event.target.value;renderOrders(current);const filter=$('#order-filter');if(filter)filter.value=selected;const rows=$$('.orders-table tbody tr');rows.forEach(row=>{const pill=$('.status-pill',row);if(selected&&pill?.classList.contains(`status-${selected}`)===false)row.hidden=true;});}});
   modal.addEventListener('change',event=>{if(event.target.id==='order-customer')updateOrderSubscriptions(event.target.value);if(event.target.id==='pay-order')updatePaymentMax();if(event.target.id==='order-subscription')localOrderTotal();if(event.target.matches('.item-service,.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
-  modal.addEventListener('input',event=>{if(event.target.matches('.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
+  modal.addEventListener('input',event=>{if(event.target.matches('input,textarea,select'))modalDirty=true;if(event.target.matches('.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
+  modal.addEventListener('change',event=>{if(event.target.matches('input,textarea,select'))modalDirty=true;});
+  modal.addEventListener('cancel',event=>{event.preventDefault();requestCloseModal();});
   $('#backup-file').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)restoreBackup(file);});
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstall=event;$('#install-button').hidden=false;});
   $('#install-button').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('#install-button').hidden=true;});
