@@ -8,6 +8,7 @@ import android.content.ClipData
 import android.os.CancellationSignal
 import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
 import android.print.PageRange
 import android.os.ParcelFileDescriptor
 import android.webkit.JavascriptInterface
@@ -155,7 +156,7 @@ class MainActivity : Activity() {
                         .build()
                     adapter.onLayout(null, attributes, CancellationSignal(),
                         object : PrintDocumentAdapter.LayoutResultCallback() {
-                            override fun onLayoutFinished(info: PrintDocumentAdapter.DocumentInfo, changed: Boolean) {
+                            override fun onLayoutFinished(info: PrintDocumentInfo, changed: Boolean) {
                                 adapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(),
                                     object : PrintDocumentAdapter.WriteResultCallback() {
                                         override fun onWriteFinished(pages: Array<PageRange>) {
