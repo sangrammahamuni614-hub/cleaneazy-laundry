@@ -181,17 +181,27 @@
     const list=[...data.subscriptions].sort((a,b)=>a.expiryDate.localeCompare(b.expiryDate));
     page.innerHTML=`${pageHeading('सदस्य योजना','योजनेची मुदत आणि ऑर्डरमधून आपोआप मोजलेला किलो वापर.',btn('new-subscription','＋ योजना जोडा'))}${list.length?`<div class="subscription-grid">${list.map(s=>{const c=customer(s.customerId),used=weeklyUsage(s),remaining=Math.max(0,s.limit-used),plan=PLANS.find(p=>p.code===s.planCode),progress=Math.min(100,used/Math.max(1,s.limit)*100);return `<article class="subscription-card"><header><span class="plan-label">${esc(plan?.periodName||(s.period==='month'?'महिना':'आठवडा'))} मर्यादा</span><span class="payment-pill ${s.active&&s.expiryDate>=today()?'payment-paid':'payment-unpaid'}">${s.active&&s.expiryDate>=today()?'सक्रिय':'मुदत संपली'}</span></header><h3>${esc(c?.fullName||'ग्राहक')}</h3><div class="subscription-name">${esc(plan?.name||s.planCode)}</div><div class="sub-metrics"><span>वापरलेले<strong>${num(used)} किलो</strong></span><span>उर्वरित<strong>${num(remaining)} किलो</strong></span><span>मासिक रक्कम<strong>${money(s.monthlyAmount)}</strong></span></div><div class="sub-progress"><div style="width:${progress}%"></div></div><footer><span>${dateFmt(s.startDate)} – ${dateFmt(s.expiryDate)}</span><span>ऑर्डरमधून आपोआप</span></footer></article>`}).join('')}</div>`:empty('सदस्य योजना उपलब्ध नाही','ग्राहकाची योजना जोडल्यानंतर येथे दिसेल.')}`;
   }
-  function renderReports() {
-    const sales=data.orders.reduce((s,o)=>s+Number(o.total),0), collection=data.payments.reduce((s,p)=>s+Number(p.amount),0), outstanding=data.orders.reduce((s,o)=>s+Number(o.outstanding),0), expenseTotal=(data.expenses||[]).reduce((s,e)=>s+Number(e.amount||0),0);
-    const byService={};data.orders.forEach(o=>(o.items||[]).forEach(i=>byService[i.name]=(byService[i.name]||0)+Number(i.amount||0)));
+  function renderReports(selectedDate=today()) {
+    const reportDate=selectedDate||today();
+    const dayOrders=data.orders.filter(o=>String(o.placedAt).slice(0,10)===reportDate);
+    const dayPayments=data.payments.filter(p=>String(p.receivedAt).slice(0,10)===reportDate);
+    const dayExpenses=(data.expenses||[]).filter(e=>String(e.date).slice(0,10)===reportDate);
+    const sales=dayOrders.reduce((sum,o)=>sum+Number(o.total),0);
+    const collection=dayPayments.reduce((sum,p)=>sum+Number(p.amount),0);
+    const cash=dayPayments.filter(p=>p.method==='cash').reduce((sum,p)=>sum+Number(p.amount),0);
+    const upi=dayPayments.filter(p=>p.method==='upi').reduce((sum,p)=>sum+Number(p.amount),0);
+    const expenseTotal=dayExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
+    const outstanding=data.orders.reduce((sum,o)=>sum+Number(o.outstanding),0);
+    const byService={};dayOrders.forEach(o=>(o.items||[]).forEach(i=>byService[i.name]=(byService[i.name]||0)+Number(i.amount||0)));
     const serviceRows=Object.entries(byService).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...serviceRows.map(x=>x[1]));
-    const salesMarkup=serviceRows.length?`<div class="bar-list">${serviceRows.map(([name,value])=>`<div class="bar-row"><span>${esc(name)}</span><div class="progress-track"><div class="progress-fill" style="width:${value/max*100}%"></div></div><strong>${money(value)}</strong></div>`).join('')}</div>`:empty('विक्री उपलब्ध नाही','ऑर्डर नोंदवल्यावर येथे दिसेल.');
+    const salesMarkup=serviceRows.length?`<div class="bar-list">${serviceRows.map(([name,value])=>`<div class="bar-row"><span>${esc(name)}</span><div class="progress-track"><div class="progress-fill" style="width:${value/max*100}%"></div></div><strong>${money(value)}</strong></div>`).join('')}</div>`:empty('या तारखेला विक्री नाही','ऑर्डर नोंदवल्यावर येथे दिसेल.');
     const businessMarkup=`<ul class="security-list"><li><span>✓</span>ग्राहक: ${num(data.customers.length)}</li><li><span>✓</span>एकूण ऑर्डर्स: ${num(data.orders.length)}</li><li><span>✓</span>सक्रिय सेवा: ${num(data.services.filter(s=>s.active).length)}</li><li><span>✓</span>सक्रिय सदस्य योजना: ${num(data.subscriptions.filter(s=>s.active).length)}</li></ul>`;
-    const cards=`<div class="report-grid"><div class="report-card"><span>एकूण विक्री</span><strong>${money(sales)}</strong><small>ऑर्डरची एकूण रक्कम</small></div><div class="report-card"><span>एकूण वसुली</span><strong>${money(collection)}</strong><small>प्रत्यक्ष नोंदवलेली पेमेंट्स</small></div><div class="report-card"><span>एकूण थकबाकी</span><strong>${money(outstanding)}</strong><small>एकूण विक्री − भरलेली रक्कम</small></div><div class="report-card"><span>नोंदवलेला खर्च</span><strong>${money(expenseTotal)}</strong><small>उपलब्ध खर्च नोंदी; नफा-तोटा नव्हे</small></div></div>`;
-    const panels=`<div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>सेवानुसार विक्री</h2></div>${salesMarkup}</section><section class="panel"><div class="panel-heading"><h2>व्यवसायाचा आढावा</h2></div>${businessMarkup}</section></div>`;
-    const orderTable=tableShell(`ऑर्डर अहवाल · ${num(data.orders.length)}`,'',orderRows([...data.orders].sort((a,b)=>b.placedAt.localeCompare(a.placedAt))));
-    page.innerHTML=`${pageHeading('अहवाल','विक्री म्हणजे ऑर्डरची एकूण रक्कम; वसुली म्हणजे प्रत्यक्ष मिळालेले पेमेंट.','<button class="secondary-button" data-action="export-report">↓ CSV डाउनलोड</button>')}${cards}${panels}${orderTable}`;
-  }  function renderWhatsApp() {
+    const cards=`<div class="report-grid"><div class="report-card"><span>त्या दिवसाची विक्री</span><strong>${money(sales)}</strong><small>${dateFmt(reportDate)} · ${num(dayOrders.length)} ऑर्डर्स</small></div><div class="report-card"><span>त्या दिवसाची वसुली</span><strong>${money(collection)}</strong><small>प्रत्यक्ष नोंदवलेले पेमेंट</small></div><div class="report-card"><span>रोख वसुली</span><strong>${money(cash)}</strong><small>त्या दिवसाची रोख पेमेंट्स</small></div><div class="report-card"><span>UPI वसुली</span><strong>${money(upi)}</strong><small>त्या दिवसाची UPI पेमेंट्स</small></div><div class="report-card"><span>त्या दिवसाचा खर्च</span><strong>${money(expenseTotal)}</strong><small>नोंदवलेले खर्च</small></div><div class="report-card"><span>एकूण थकबाकी</span><strong>${money(outstanding)}</strong><small>सर्व ऑर्डर्सची बाकी</small></div></div>`;
+    const panels=`<div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>त्या दिवसाची सेवानुसार विक्री</h2></div>${salesMarkup}</section><section class="panel"><div class="panel-heading"><h2>व्यवसायाचा आढावा</h2></div>${businessMarkup}</section></div>`;
+    const orderTable=tableShell(`ऑर्डर अहवाल · ${num(dayOrders.length)}`,'',orderRows([...dayOrders].sort((a,b)=>b.placedAt.localeCompare(a.placedAt))));
+    page.innerHTML=`${pageHeading('अहवाल','तारीख निवडा. विक्री, वसुली आणि खर्च वेगवेगळे दाखवले आहेत.',`<label class="field" style="display:flex;align-items:center;gap:8px;margin:0"><span>तारीख</span><input id="report-date" type="date" value="${esc(reportDate)}" aria-label="अहवालाची तारीख"></label><button class="secondary-button" data-action="export-report">↓ CSV डाउनलोड</button>`)}${cards}${panels}${orderTable}`;
+  }
+  function renderWhatsApp() {
     const list=[...(data.messages||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
     const rows=list.length?`<div class="table-scroll"><table><thead><tr><th>वेळ</th><th>सूचना प्रकार</th><th>प्राप्तकर्ता</th><th>स्थिती</th><th>प्रयत्न</th><th>प्रदाता संदेश क्रमांक</th></tr></thead><tbody>${list.map(m=>`<tr><td>${dateFmt(String(m.createdAt||'').slice(0,10))}</td><td>${esc(m.event||'संदेश')}</td><td>${displayPhone(m.recipient)}</td><td><span class="message-state ${['sent','delivered','read'].includes(m.status)?'sent':m.status==='failed'?'failed':''}">${messageStatus[m.status]||'रांगेत'}</span>${m.error?`<div class="cell-sub">${esc(m.error)}</div>`:''}</td><td>${num(m.attempts||0)}</td><td>${esc(m.providerId||'—')}</td></tr>`).join('')}</tbody></table></div>`:empty('संदेश रांगेत नाहीत','ऑर्डरच्या सूचना येथे रांगेत जोडल्या जातील.');
     page.innerHTML=`${pageHeading('WhatsApp संदेश','WhatsApp Cloud API द्वारे संदेश पाठवण्याची रांग आणि स्थिती.',btn('refresh','↻ अद्ययावत करा','secondary'))}<div class="mode-note" style="margin-bottom:14px"><span class="mode-dot"></span><span>${isDemo?'नमुना संदेश फक्त सरावासाठी आहेत; प्रत्यक्ष WhatsApp संदेश जात नाहीत.':'ऑनलाइन संदेश रांगेतील संदेश आणि पाठवण्याची स्थिती येथे दिसते.'}</span></div>${tableShell(`संदेश रांग · ${num(list.length)}`,'',rows)}`;
@@ -389,10 +399,16 @@
     }catch(error){toast(`बॅकअप फाइल वाचली नाही: ${error.message}`,'error');}finally{$('#backup-file').value='';}
   }
   function exportReport() {
+    const reportDate=$('#report-date')?.value||today();
+    const orders=data.orders.filter(o=>String(o.placedAt).slice(0,10)===reportDate);
+    const expenses=(data.expenses||[]).filter(e=>String(e.date).slice(0,10)===reportDate);
+    const payments=data.payments.filter(p=>String(p.receivedAt).slice(0,10)===reportDate);
     const rows=[['नोंदीचा प्रकार','ऑर्डर / खर्च क्रमांक','ग्राहक / खर्च प्रकार','तारीख','स्थिती / पेमेंट पद्धत','एकूण / रक्कम','भरलेले','थकबाकी'],
-      ...data.orders.map(o=>['ऑर्डर',o.number,customer(o.customerId)?.fullName||'',o.placedAt,STATUS[o.status],o.total,o.paid,o.outstanding]),
-      ...(data.expenses||[]).map(e=>['खर्च',`EXP-${e.id}`,e.category,e.date,e.method,e.amount,'',''])];
-    const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');download(`CleanEazy-अहवाल-${today()}.csv`,csv,'text/csv;charset=utf-8');
+      ...orders.map(o=>['ऑर्डर',o.number,customer(o.customerId)?.fullName||'',o.placedAt,STATUS[o.status],o.total,o.paid,o.outstanding]),
+      ...expenses.map(e=>['खर्च',`EXP-${e.id}`,e.category,e.date,e.method,e.amount,'','']),
+      ...payments.map(p=>['पेमेंट',`PAY-${p.id}`,customer(order(p.orderId)?.customerId)?.fullName||'',String(p.receivedAt).slice(0,10),p.method,p.amount,'',''])];
+    const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    download(`CleanEazy-अहवाल-${reportDate}.csv`,csv,'text/csv;charset=utf-8');
   }
   async function logout() {
     if(!isDemo&&session?.access_token){try{await fetch(`${String(CONFIG.supabaseUrl).replace(/\/$/,'')}/auth/v1/logout`,{method:'POST',headers:{apikey:CONFIG.supabaseAnonKey,Authorization:`Bearer ${session.access_token}`}});}catch(_){}}
@@ -424,7 +440,7 @@
   $('#global-search').addEventListener('keydown',event=>{if(event.key==='Enter'){const q=event.currentTarget.value;setPage('orders');renderOrders(q);}});
   document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();$('#global-search').focus();}});
   page.addEventListener('input',event=>{if(event.target.id==='customer-search'){const value=event.target.value;renderCustomers(value);const input=$('#customer-search');input?.focus();input?.setSelectionRange(value.length,value.length);}if(event.target.id==='order-search'){const value=event.target.value;renderOrders(value);const input=$('#order-search');input?.focus();input?.setSelectionRange(value.length,value.length);}});
-  page.addEventListener('change',event=>{if(event.target.id==='order-filter'){const current=$('#order-search')?.value||'';const selected=event.target.value;renderOrders(current);const filter=$('#order-filter');if(filter)filter.value=selected;const rows=$$('.orders-table tbody tr');rows.forEach(row=>{const pill=$('.status-pill',row);if(selected&&pill?.classList.contains(`status-${selected}`)===false)row.hidden=true;});}});
+  page.addEventListener('change',event=>{if(event.target.id==='report-date'){renderReports(event.target.value||today());return;}if(event.target.id==='order-filter'){const current=$('#order-search')?.value||'';const selected=event.target.value;renderOrders(current);const filter=$('#order-filter');if(filter)filter.value=selected;const rows=$$('.orders-table tbody tr');rows.forEach(row=>{const pill=$('.status-pill',row);if(selected&&pill?.classList.contains(`status-${selected}`)===false)row.hidden=true;});}});
   modal.addEventListener('change',event=>{if(event.target.id==='order-customer')updateOrderSubscriptions(event.target.value);if(event.target.id==='pay-order')updatePaymentMax();if(event.target.id==='order-subscription')localOrderTotal();if(event.target.matches('.item-service,.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
   modal.addEventListener('input',event=>{if(event.target.matches('input,textarea,select'))modalDirty=true;if(event.target.matches('.item-quantity')||event.target.id==='order-discount')localOrderTotal();});
   modal.addEventListener('change',event=>{if(event.target.matches('input,textarea,select'))modalDirty=true;});
