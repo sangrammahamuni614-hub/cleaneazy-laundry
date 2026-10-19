@@ -1,4 +1,4 @@
-const CACHE = 'cleaneazy-software-v3';
+const CACHE = 'cleaneazy-software-v4';
 const APP_SHELL = ['./', './index.html', './offline.html', './styles.css', './app.js', './runtime-config.js', './reset-password.html', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
