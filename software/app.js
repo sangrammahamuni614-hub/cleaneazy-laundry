@@ -383,7 +383,9 @@
     }catch(error){toast(`बॅकअप फाइल वाचली नाही: ${error.message}`,'error');}finally{$('#backup-file').value='';}
   }
   function exportReport() {
-    const rows=[['ऑर्डर क्रमांक','ग्राहक','ऑर्डर तारीख','स्थिती','एकूण','भरलेले','थकबाकी'],...data.orders.map(o=>[o.number,customer(o.customerId)?.fullName||'',o.placedAt,STATUS[o.status],o.total,o.paid,o.outstanding])];
+    const rows=[['नोंदीचा प्रकार','ऑर्डर / खर्च क्रमांक','ग्राहक / खर्च प्रकार','तारीख','स्थिती / पेमेंट पद्धत','एकूण / रक्कम','भरलेले','थकबाकी'],
+      ...data.orders.map(o=>['ऑर्डर',o.number,customer(o.customerId)?.fullName||'',o.placedAt,STATUS[o.status],o.total,o.paid,o.outstanding]),
+      ...(data.expenses||[]).map(e=>['खर्च',`EXP-${e.id}`,e.category,e.date,e.method,e.amount,'',''])];
     const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');download(`CleanEazy-अहवाल-${today()}.csv`,csv,'text/csv;charset=utf-8');
   }
   async function logout() {
